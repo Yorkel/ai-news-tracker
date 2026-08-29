@@ -1,0 +1,327 @@
+"""
+Page 2 - Select Categories.
+
+Curator picks a section for each article kept on Page 1 (Triage). Articles are
+grouped into clusters (cosine-similarity ≥ 0.85, computed by
+src/inference/scoring.py) so cross-outlet duplicates and same-source near-
+duplicates appear together - curator picks one (or several) per cluster.
+
+Action transitions:
+  keep  →  accept_top1  (curator confirms top1 prediction)
+        →  accept_top2  (curator chooses top2)
+        →  manual       (curator picks a different category)
+"""
+
+from __future__ import annotations
+from html import escape as html_escape
+from urllib.parse import urlparse
+
+import streamlit as st
+import pandas as pd
+
+from dashboard.config import CATEGORY_ORDER, CATEGORY_SHORT_LABELS, source_label
+from dashboard.data import (
+    clean_text, get_kept_articles, is_authenticated, record_decision,
+)
+
+
+_STATUS_COLOUR = {
+    "Awaiting category": "#d35400",
+    "Categorised": "#1e8449",
+}
+
+_TAG_STYLE = (
+    "background:#eef;color:#333;padding:2px 8px;border-radius:10px;"
+    "font-size:10px;border:1px solid #ccd;margin-right:3px;"
+)
+
+
+def _badges_html(geo, topics) -> str:
+    """'Key tags:' row - geographic_focus + up to 3 topic_tags, all in the
+    same neutral style (country no longer coloured differently)."""
+    parts = []
+    geo = clean_text(geo)
+    if geo:
+        parts.append(f"<span style='{_TAG_STYLE}'>{_html(geo)}</span>")
+    for t in (topics or [])[:3]:
+        t = clean_text(t)
+        if t:
+            parts.append(f"<span style='{_TAG_STYLE}'>{_html(t)}</span>")
+    if not parts:
+        return ""
+    return (
+        "<p style='margin:2px 0;font-size:11px;color:#555;'>"
+        "<b>Key tags:</b> " + "".join(parts) + "</p>"
+    )
+
+
+def _html(v) -> str:
+    """Escape external text before inserting it into styled HTML snippets."""
+    return html_escape(clean_text(v), quote=True)
+
+
+def _safe_href(v) -> str:
+    """Return a clickable web URL, or '' for non-web / malformed values."""
+    url = clean_text(v)
+    parsed = urlparse(url)
+    return url if parsed.scheme in {"http", "https"} and parsed.netloc else ""
+
+
+def _format_conf(c) -> str:
+    """Return ' (87%)' style suffix; empty if confidence missing."""
+    try:
+        v = float(c)
+        if v != v:  # NaN
+            return ""
+        return f" ({v:.0%})"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _status_for(action: str | None) -> str:
+    if action in ("accept_top1", "accept_top2", "manual"):
+        return "Categorised"
+    return "Awaiting category"
+
+
+@st.fragment
+def _render_article(art: dict, idx_in_cluster: int):
+    """Render one article card with the category-assignment UI.
+
+    Wrapped in @st.fragment so button clicks (Top 1, Top 2, Manual, Reject)
+    only rerun this single card - not the whole page list. Massively cuts
+    perceived latency on a busy queue.
+    """
+    url = clean_text(art.get("url"))
+    title = clean_text(art.get("title")) or "No title"
+    source = source_label(clean_text(art.get("source")))
+    article_date = clean_text(art.get("article_date"))
+    action = art.get("action")
+    curator_label = art.get("curator_label")
+    status = _status_for(action)
+
+    top1 = art.get("top1") if pd.notna(art.get("top1")) else None
+    top2 = art.get("top2") if pd.notna(art.get("top2")) else None
+    conf1 = _format_conf(art.get("top1_confidence"))
+    conf2 = _format_conf(art.get("top2_confidence"))
+
+    auth = is_authenticated()
+
+    with st.container(border=True):
+        # Title row - title on the left, status badge inline on the right
+        col_title, col_status = st.columns([5, 1])
+        with col_title:
+            st.markdown(f"### {_html(title)}")
+        with col_status:
+            colour = _STATUS_COLOUR[status]
+            badge_text = "Categorised" if status == "Categorised" else "Awaiting category"
+            st.markdown(
+                f"<p style='text-align:right;color:{colour};font-weight:600;"
+                f"margin:14px 0 0 0;font-size:13px;'>{badge_text}</p>",
+                unsafe_allow_html=True,
+            )
+
+        # Key tags row - directly under title, smaller font.
+        badges = _badges_html(art.get("geographic_focus"), art.get("topic_tags"))
+        if badges:
+            st.markdown(badges, unsafe_allow_html=True)
+
+        # Source, Date
+        st.markdown(
+            f"<p style='color:#666;font-size:13px;margin:2px 0;'>"
+            f"<b>Source:</b> {_html(source)} &nbsp;&nbsp; <b>Date:</b> {_html(article_date)}</p>",
+            unsafe_allow_html=True,
+        )
+
+        # URL (full, clickable)
+        if url:
+            url_html = _html(url)
+            href_html = _html(_safe_href(url))
+            link = f"<a href='{href_html}' target='_blank'>{url_html}</a>" if href_html else url_html
+            st.markdown(
+                f"<p style='font-size:12px;margin:0 0 6px 0;overflow-wrap:anywhere;'>"
+                f"<b>URL:</b> {link}</p>",
+                unsafe_allow_html=True,
+            )
+
+        # Show summary expander (same style as Triage page; uses stored summary
+        # from articles.summary - pre-generated by the scrape Phase 5 enrichment).
+        summary_text = art.get("summary")
+        with st.expander("📋 Show summary", expanded=False):
+            if summary_text:
+                st.markdown(
+                    f"<div style='background:#f8f4ea;border-left:3px solid #f39c12;"
+                    f"padding:8px 12px;font-size:12px;'>{_html(summary_text)}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    "<div style='background:#f5f5f5;border-left:3px solid #aaa;"
+                    "padding:8px 12px;color:#666;font-style:italic;font-size:12px;'>"
+                    "Summary unavailable</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # Action buttons - all four on ONE row, equal-width.
+        # Top 1 (green) | Top 2 (blue) | Select (dropdown) | Remove (grey)
+        col_t1, col_t2, col_man, col_rem = st.columns([2, 2, 2, 1])
+        with col_t1:
+            short1 = CATEGORY_SHORT_LABELS.get(top1, "(no top1)") if top1 else "(no top1)"
+            st.markdown('<div class="cat-top1-marker"></div>', unsafe_allow_html=True)
+            if st.button(
+                f"{short1}{conf1}",
+                key=f"cat_t1_{url}",
+                type="secondary",
+                use_container_width=True,
+                disabled=(not auth) or (top1 is None),
+            ):
+                record_decision(url, "accept_top1", top1)
+                st.rerun()
+        with col_t2:
+            short2 = CATEGORY_SHORT_LABELS.get(top2, "(no top2)") if top2 else "(no top2)"
+            st.markdown('<div class="cat-top2-marker"></div>', unsafe_allow_html=True)
+            if st.button(
+                f"{short2}{conf2}",
+                key=f"cat_t2_{url}",
+                type="secondary",
+                use_container_width=True,
+                disabled=(not auth) or (top2 is None),
+            ):
+                record_decision(url, "accept_top2", top2)
+                st.rerun()
+        with col_man:
+            # Manual = single selectbox. Picking commits immediately via the
+            # on_change callback - no separate Apply button.
+            # First option is "Manual ▾" placeholder; picking a real category
+            # records action=manual with that label.
+            MANUAL_PLACEHOLDER = "Other"
+            options = [MANUAL_PLACEHOLDER] + list(CATEGORY_ORDER)
+
+            # If curator has already chosen a manual category, show that
+            # as the displayed value; else show the placeholder.
+            current_idx = 0
+            if action == "manual" and curator_label in CATEGORY_ORDER:
+                current_idx = options.index(curator_label)
+
+            choice = st.selectbox(
+                "Manual",
+                options=options,
+                index=current_idx,
+                format_func=lambda x: x if x == MANUAL_PLACEHOLDER else CATEGORY_SHORT_LABELS.get(x, x),
+                key=f"cat_man_choice_{url}",
+                label_visibility="collapsed",
+                disabled=not auth,
+            )
+            # Commit on a genuinely new pick, then a full st.rerun() (app scope) so
+            # the page-level "awaiting category" count refreshes too. The card is an
+            # @st.fragment, so without an app rerun that count goes stale — this is
+            # Curator feedback: categorising should update status in real time.
+            # Leaving the chosen category shown is what makes it stick (curator feedback
+            # earlier "Other didn't stick" point); record_decision clears the
+            # decisions cache so the badge flips to Categorised on rerun.
+            if auth and choice != MANUAL_PLACEHOLDER and choice != curator_label:
+                record_decision(url, "manual", choice)
+                st.rerun()
+        with col_rem:
+            if st.button(
+                "Remove",
+                key=f"cat_reject_{url}",
+                type="secondary",
+                use_container_width=True,
+                disabled=not auth,
+            ):
+                record_decision(url, "reject", "")
+                st.rerun()
+
+
+def render(df):
+    st.title("Step 2: Categorise")
+    st.markdown(
+        "For each article kept on **Triage**, pick a newsletter section. "
+        "Articles covering the same story are grouped together; pick one or "
+        "categorise several if they offer different angles."
+    )
+
+    # Aggressive page-wide shrink - buttons + selectbox should look the
+    # same size (height + font) so the 4-button row reads as one unit.
+    st.markdown("""
+    <style>
+    /* Buttons */
+    [data-testid="stButton"] button,
+    [data-testid="stPopover"] button {
+        font-size: 9px !important;
+        padding: 3px 6px !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        line-height: 1.2 !important;
+    }
+    /* Selectbox - match button height. Streamlit wraps in multiple divs;
+       the real input lives inside [data-baseweb="select"]. */
+    [data-testid="stSelectbox"] > div,
+    [data-testid="stSelectbox"] [data-baseweb="select"],
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        min-height: 28px !important;
+        height: 28px !important;
+        font-size: 9px !important;
+    }
+    [data-testid="stSelectbox"] [data-baseweb="select"] input {
+        font-size: 9px !important;
+    }
+    [data-testid="stSelectbox"] label {
+        font-size: 9px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Targeted button colours via marker-divs + sibling-selector CSS.
+    # Top 1 = green (model's best guess), Top 2 = blue (alternative).
+    # Same trick as the Keep button on Triage.
+    st.markdown("""
+    <style>
+    .element-container:has(.cat-top1-marker) { display: none; }
+    .element-container:has(.cat-top1-marker) + div [data-testid="stButton"] button {
+        background-color: #2ecc71 !important;
+        border-color: #27ae60 !important;
+        color: white !important;
+    }
+    .element-container:has(.cat-top2-marker) { display: none; }
+    .element-container:has(.cat-top2-marker) + div [data-testid="stButton"] button {
+        background-color: #3498db !important;
+        border-color: #2980b9 !important;
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    kept = get_kept_articles(df)
+    if not kept:
+        st.info(
+            "Nothing here yet. Keep some articles on the **Triage** page and "
+            "they'll appear here for category assignment."
+        )
+        return
+
+    # Near-duplicate clustering is deliberately not applied here: it grouped distinct articles
+    # as "the same story" and hid them behind a "+N similar" expander, so real
+    # content went missing. Every kept article now renders on its own. cluster_id
+    # in the data is ignored here. Sort newest-first, then by composite_score.
+    def _sort_key(a):
+        d = pd.to_datetime(a.get("article_date"), errors="coerce", dayfirst=True)
+        return (
+            pd.isna(d),
+            -(d.value if not pd.isna(d) else 0),
+            -(a.get("composite_score") or 0.0),
+            a.get("url") or "",
+        )
+    ordered = sorted(kept, key=_sort_key)
+
+    # Summary line
+    n_articles = len(kept)
+    n_awaiting = sum(1 for a in kept if _status_for(a.get("action")) == "Awaiting category")
+    st.info(
+        f"**{n_articles}** kept article(s); {n_awaiting} awaiting category."
+    )
+
+    # Render each article individually (no clustering)
+    for art in ordered:
+        _render_article(art, idx_in_cluster=0)

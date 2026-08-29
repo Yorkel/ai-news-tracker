@@ -1,0 +1,138 @@
+project:
+  name: AI News Tracker
+  description: AI governance, AI news, and AI/ML research ingestion, ranking, and curator review.
+  audience: Louise Yorke
+
+database:
+  article_table: articles
+  classification_table: classify_newsletter
+  dashboard_view: v_dashboard
+
+# Categories are NOT used yet. Nothing classifies articles until a classifier
+# is wired up, and the dashboard renders uncategorised articles fine (the
+# v_dashboard view LEFT JOINs predictions). These are here so the labels are
+# settled before that step, not because anything reads them today.
+labels:
+  order:
+    - governance
+    - research
+    - industry
+    - safety
+    - tooling
+    - other
+  display:
+    governance: Governance, policy and regulation
+    research: Research and evaluation
+    industry: Industry, funding and adoption
+    safety: Safety, incidents and evaluations
+    tooling: Models, tooling and releases
+    other: Other relevant updates
+  short:
+    governance: Governance
+    research: Research
+    industry: Industry
+    safety: Safety
+    tooling: Tooling
+    other: Other
+  colors:
+    governance: "#3B6EA8"
+    research: "#4F8A5B"
+    industry: "#C9793A"
+    safety: "#B0504F"
+    tooling: "#2E8C9E"
+    other: "#667085"
+
+summaries:
+  publication_name: AI news tracker digest
+  style: Short, factual, close to the source text, no added interpretation.
+  unavailable_text: Summary unavailable
+
+relevance:
+  # Starter list — NEEDS REVIEW against real scraped output before the
+  # scheduled workflows are switched on. Matched against the TITLE only
+  # (see run.py), so terms that only ever appear in body text are wasted.
+  keywords:
+    - ai
+    - artificial intelligence
+    - machine learning
+    - deep learning
+    - neural network
+    - large language model
+    - llm
+    - foundation model
+    - frontier model
+    - generative ai
+    - genai
+    - chatbot
+    - algorithm
+    - algorithmic
+    - automated decision
+    - facial recognition
+    - computer vision
+    - ai act
+    - ai safety
+    - ai governance
+    - ai regulation
+    - ai policy
+    - responsible ai
+    - trustworthy ai
+    - model evaluation
+    - benchmark
+    - compute
+    - gpu
+    - openai
+    - anthropic
+    - deepmind
+    - hugging face
+
+  # Filled in during the sources step. While this is EMPTY, run.py drops every
+  # single article — is_approved_domain() fails closed by design.
+  approved_domains: []
+
+  # Subset of approved_domains that publish across many topics, so the keyword
+  # filter must also pass (e.g. general news sites, university news pages).
+  broad_domains: []
+
+  blocked_domains:
+    - instagram.com
+    - facebook.com
+    - twitter.com
+    - x.com
+    - tiktok.com
+    - youtube.com
+    - youtu.be
+    - linkedin.com
+    - msn.com
+    - pressreader.com
+
+  # Deliberately does NOT block /us-news/ or /world/ — unlike the education
+  # tracker this came from, non-UK AI coverage is core scope, not noise.
+  blocked_url_patterns:
+    - /sport/
+    - /entertainment/
+    - /celebrity/
+    - /fashion/
+    - /lifestyle/
+    - /travel/
+    - /iplayer/
+    - /programmes/
+
+  blocked_title_keywords: []
+
+  paywall_domains:
+    - telegraph.co.uk
+    - thetimes.com
+    - thetimes.co.uk
+    - thesundaytimes.co.uk
+    - ft.com
+    - spectator.co.uk
+    - thesun.co.uk
+
+geography:
+  # OFF for this tracker. The education tracker vetoed any article mentioning
+  # a non-UK place, which for AI would drop most of what matters — the White
+  # House, Brussels, Beijing, Stanford, and every US lab.
+  veto_non_uk: false
+  negative_country_keywords: []
+  default_country: uk
+  source_country: {}

@@ -1,0 +1,15 @@
+# AI News Tracker — source roster.
+#
+# NOT YET POPULATED. Adding entries here is only half the job: a source's
+# articles are still dropped unless its domain is also listed under
+# relevance.approved_domains in config/domain.yml (run.py fails closed).
+#
+# Workflow for each new source:
+#   1. Add the entry below with `disabled: true`.
+#   2. Add its domain to approved_domains in config/domain.yml.
+#   3. Test it:  python -m src.scraping.try_source <name>
+#   4. Flip `disabled: false` once the output looks right.
+#
+# type: rss | web | newsletter | google_alert
+
+sources: []

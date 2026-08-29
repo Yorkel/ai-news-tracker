@@ -1,0 +1,801 @@
+"""
+summarise.py
+Generate 1-2 sentence editorial summaries of accepted tracker articles
+using the configured provider order. Called by the
+dashboard when the curator clicks "Generate Summary" on an accepted article
+(or in batch when assembling the draft).
+
+Used by the scrape/sweep enrichment jobs and by the dashboard's manual
+summary buttons. The functions are side-effect-free; callers decide whether to
+write the returned summary to `articles` or `curator_decisions`.
+
+Behaviour:
+  - Reads 5 random anchor examples from the cleaned newsletter archive to
+    anchor the in-house editorial voice, with a bundled fallback for CI/deploys.
+  - Uses Claude Haiku 4.5 with prompt caching when Claude is selected: the
+    system prompt + few-shot examples are cached, so each subsequent article
+    costs ~$0.0003 instead of ~$0.0008.
+  - Uses OpenAI as primary when ENRICH_PROVIDER=openai, with Claude as a
+    best-effort fallback when configured.
+  - If both providers are unavailable, returns a deterministic extractive
+    fallback from the supplied article text, or "Summary unavailable".
+  - Returns the generated summary as a plain string.
+  - Has --dry-run mode that prints estimated cost without calling the API.
+
+Cost reference (Haiku 4.5):
+  Input $0.80 / output $4.00 per million tokens
+  With caching: cached input is 90% off after the first call
+  → ~$0.0003-$0.0008 per article = ~$0.04 per typical 50-item newsletter
+
+Env:
+  ENRICH_PROVIDER — choose openai or claude provider order
+  ANTHROPIC_API_KEY — Claude provider or fallback
+  OPENAI_API_KEY — OpenAI provider or fallback
+  OPENAI_SUMMARY_MODEL — optional override for the OpenAI model
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import random
+import re
+import sys
+from pathlib import Path
+
+
+
+DEFAULT_MODEL = "claude-haiku-4-5"
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+DEFAULT_MAX_TOKENS = 200
+DEFAULT_TEMPERATURE = 0.4   # slight variation but mostly deterministic
+PLACEHOLDER = "Summary unavailable"
+FALLBACK_SUMMARY_MAX_WORDS = 60
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Few-shot anchor source: the cleaned newsletter archive, where `description`
+# is the curator's editorial prose summary as published. NOT train.csv —
+# that has article body text, which is the wrong style to anchor on.
+# CSV is gitignored — only used when running locally. Streamlit Cloud falls
+# back to BUNDLED_FEW_SHOT below.
+FEW_SHOT_CSV = _PROJECT_ROOT / "data" / "interim" / "newsletters_cleaned.csv"
+
+# Fixed bundle of example summaries for CI/deploys when no local example CSV exists.
+# Replace these with public, domain-appropriate examples for a real tracker.
+BUNDLED_FEW_SHOT: tuple[dict, ...] = (
+    {
+        "title": "New guidance published for sector leaders",
+        "summary": "The guidance sets out expected practice, implementation dates, and the organisations responsible for the next phase of delivery.",
+        "category": "Policy",
+    },
+    {
+        "title": "Research review identifies implementation barriers",
+        "summary": "The review summarises recent evidence on adoption barriers and highlights where further evaluation is needed.",
+        "category": "Research",
+    },
+    {
+        "title": "New tool launched to support local teams",
+        "summary": "The tool is intended to help teams compare options, track progress, and share practical learning across organisations.",
+        "category": "Technology",
+    },
+)
+N_FEW_SHOT_EXAMPLES = 5
+TEXT_TRUNCATE_WORDS = 500   # cap article content to avoid wasting tokens
+
+# Pricing (USD per million tokens) — used by the dry-run cost estimate.
+# Update these when Anthropic changes pricing.
+PRICE_INPUT_USD_PER_M = 0.80
+PRICE_OUTPUT_USD_PER_M = 4.00
+PRICE_CACHED_INPUT_USD_PER_M = 0.08   # 90% off cached input
+
+
+# ─── Prompt construction ─────────────────────────────────────────────────────
+
+SYSTEM_PROMPT = """You are writing 1-2 sentence summaries of articles for a
+domain-specific news tracker digest. The audience is busy curators who need a
+factual, source-faithful account of what each article says.
+
+The editorial principle is strict: summarise the article using its own language.
+Do NOT add framing, opinion, interpretation, policy context, or anything not
+stated in the article itself.
+
+Concrete rules:
+- 1-2 sentences. Concise. Use the article's own phrasing wherever possible.
+- Paraphrase or near-quote; do not interpret.
+- Do NOT add words like "could", "may", or "is expected to" unless the article uses them.
+- Do NOT add editorial verbs like "argues", "warns", "calls for", or "highlights" unless they appear in the article.
+- Lead with what the article literally states the news, finding, or announcement is.
+- Use the spelling and terminology of the source publication.
+- No headlines, no titles, no markdown, no quotation marks. Plain summary text only.
+
+CRITICAL behavioural rules:
+- NEVER write meta-text like "I'd be happy to help", "the article content appears to be incomplete", "could you share more", or "I cannot provide".
+- If the body text is missing or too sparse to faithfully summarise, output EXACTLY this string and nothing else: Summary unavailable
+- Do NOT hallucinate. Do NOT invent facts, names, findings, or context that are not in the supplied text.
+- Output ONLY the summary text or "Summary unavailable". No preamble.
+
+You will be given example summaries to anchor on, then asked to summarise a new article. Match their style: descriptive, close to source, no commentary."""
+
+
+def _load_few_shot_examples(n: int = N_FEW_SHOT_EXAMPLES, seed: int | None = None) -> list[dict]:
+    """Return N few-shot examples of curator-style summaries.
+
+    Prefers the full CSV (gives stylistic variety per call) when available;
+    falls back to BUNDLED_FEW_SHOT when the CSV is gitignored away — that's
+    the Streamlit Cloud / GH Actions path.
+    """
+    if FEW_SHOT_CSV.exists():
+        import pandas as pd
+        df = pd.read_csv(FEW_SHOT_CSV)
+        df = df.dropna(subset=["title", "description"])
+        df = df[df["description"].str.split().str.len() >= 10]
+        if len(df) >= n:
+            rng = random.Random(seed) if seed is not None else random
+            sampled = df.sample(n=n, random_state=rng.randint(0, 2**31))
+            return [
+                {
+                    "title": str(row["title"]).strip(),
+                    "summary": str(row["description"]).strip(),
+                    "category": str(row.get("theme", "")),
+                }
+                for _, row in sampled.iterrows()
+            ]
+
+    # Fallback — fixed bundle. Sampled deterministically so output is stable.
+    rng = random.Random(seed) if seed is not None else random.Random(0)
+    return rng.sample(list(BUNDLED_FEW_SHOT), min(n, len(BUNDLED_FEW_SHOT)))
+
+
+def _build_user_prompt(title: str, body: str, category: str | None) -> str:
+    """User-message portion: the article to summarise."""
+    body_truncated = " ".join((body or "").split()[:TEXT_TRUNCATE_WORDS])
+    parts = []
+    if title:
+        parts.append(f"Title: {title}")
+    if category:
+        parts.append(f"Newsletter category: {category}")
+    if body_truncated:
+        parts.append(f"Article content (first {TEXT_TRUNCATE_WORDS} words):\n{body_truncated}")
+    parts.append(
+        "\nWrite a 1-2 sentence editorial summary in the style of the examples above. "
+        "Output ONLY the summary text — no preamble, no quotes, no markdown."
+    )
+    return "\n\n".join(parts)
+
+
+def _system_text(few_shot: list[dict]) -> str:
+    examples_text = "\n\n".join(
+        f"Example {i+1} (category: {ex.get('category', '')}):\n"
+        f"Article title: {ex['title']}\n"
+        f"Curator summary: {ex['summary']}"
+        for i, ex in enumerate(few_shot)
+    )
+    return SYSTEM_PROMPT + "\n\n--- Example summaries from past issues ---\n\n" + examples_text
+
+
+def _build_messages(article_title: str, article_body: str, article_category: str | None,
+                    few_shot: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Return (system_messages, user_messages) ready for client.messages.create.
+    System portion is shaped for prompt-caching (single cached block)."""
+    # The system block contains the instructions + the few-shot examples.
+    # Marked cache_control so the second-onwards call within the 5-min window
+    # gets the 90% input discount on this block.
+    system = [
+        {
+            "type": "text",
+            "text": _system_text(few_shot),
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+    user = [
+        {"role": "user", "content": _build_user_prompt(article_title, article_body, article_category)}
+    ]
+    return system, user
+
+
+def _clip_words(text: str, max_words: int = FALLBACK_SUMMARY_MAX_WORDS) -> str:
+    """Collapse whitespace and clip to a readable dashboard-sized snippet."""
+    words = re.sub(r"\s+", " ", (text or "").strip()).split()
+    if len(words) <= max_words:
+        return " ".join(words)
+    return " ".join(words[:max_words]).rstrip(" ,;:") + "..."
+
+
+def _first_sentences(text: str, max_sentences: int = 2) -> str:
+    """Return the opening sentence(s), falling back to a word clip for fragments."""
+    cleaned = re.sub(r"\s+", " ", (text or "").strip())
+    if not cleaned:
+        return ""
+    sentences = [
+        s.strip()
+        for s in re.split(r"(?<=[.!?])\s+", cleaned)
+        if s.strip()
+    ]
+    if not sentences:
+        return _clip_words(cleaned)
+    return _clip_words(" ".join(sentences[:max_sentences]))
+
+
+def extractive_fallback_summary(*, title: str, text: str) -> str:
+    """Summary that requires no external model.
+
+    Used only when Claude/OpenAI are unavailable. It never fabricates: prefer the
+    article body, strip a duplicated title when text_clean was used, then return
+    the opening source sentence(s), clipped for dashboard display.
+    """
+    body = re.sub(r"\s+", " ", (text or "").strip())
+    if not body:
+        return PLACEHOLDER
+
+    clean_title = re.sub(r"\s+", " ", (title or "").strip())
+    if clean_title and body.lower().startswith(clean_title.lower()):
+        body = body[len(clean_title):].strip(" :-")
+
+    summary = _first_sentences(body)
+    if summary:
+        return summary
+    return _clip_words(clean_title) or PLACEHOLDER
+
+
+def _openai_summary_model(model: str | None = None) -> str:
+    return model or os.environ.get("OPENAI_SUMMARY_MODEL") or DEFAULT_OPENAI_MODEL
+
+
+def _clean_summary_result(result: str) -> str:
+    result = (result or "").strip()
+    if not result or _looks_like_refusal(result):
+        return PLACEHOLDER
+    return result
+
+
+# ─── Summarisation entry points ──────────────────────────────────────────────
+
+def summarise_article_openai(*, title: str, text: str, category: str | None = None,
+                           few_shot: list[dict] | None = None,
+                           model: str | None = None,
+                           client=None) -> str:
+    """Generate one summary through OpenAI's Responses API.
+
+    This mirrors the Claude prompt and returns the same plain summary string so
+    callers can use it as a drop-in fallback.
+    """
+    if client is None:
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("OPENAI_API_KEY is not set")
+        from openai import OpenAI
+        client = OpenAI(timeout=60.0, max_retries=2)
+
+    if few_shot is None:
+        few_shot = _load_few_shot_examples()
+
+    response = client.responses.create(
+        model=_openai_summary_model(model),
+        instructions=_system_text(few_shot),
+        input=_build_user_prompt(title, text, category),
+        max_output_tokens=DEFAULT_MAX_TOKENS,
+    )
+    return _clean_summary_result(getattr(response, "output_text", ""))
+
+
+def summarise_article(*, title: str, text: str, category: str | None = None,
+                      few_shot: list[dict] | None = None,
+                      model: str = DEFAULT_MODEL,
+                      client=None,
+                      openai_client=None,
+                      openai_model: str | None = None,
+                      allow_openai_fallback: bool = True,
+                      allow_local_fallback: bool = True) -> str:
+    """Generate one summary.
+
+    Provider order is Claude -> OpenAI -> deterministic extractive fallback.
+    Passing `client` still reuses a Claude client across calls; passing
+    `openai_client` lets tests or batch callers reuse an OpenAI client too.
+    """
+    if few_shot is None:
+        few_shot = _load_few_shot_examples()
+
+    claude_error: Exception | None = None
+    if client is None and os.environ.get("ANTHROPIC_API_KEY"):
+        from src.inference.anthropic_client import make_anthropic_client
+        client = make_anthropic_client(5)   # IPv4/proxy-aware; picks up env vars
+
+    if client is not None:
+        try:
+            system, messages = _build_messages(title, text, category, few_shot)
+            response = client.messages.create(
+                model=model,
+                max_tokens=DEFAULT_MAX_TOKENS,
+                temperature=DEFAULT_TEMPERATURE,
+                system=system,
+                messages=messages,
+            )
+            return _clean_summary_result(response.content[0].text)
+        except Exception as e:
+            claude_error = e
+            print(
+                f"  Claude summary failed; trying fallback: {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
+    else:
+        claude_error = RuntimeError("ANTHROPIC_API_KEY is not set")
+
+    if allow_openai_fallback:
+        try:
+            return summarise_article_openai(
+                title=title,
+                text=text,
+                category=category,
+                few_shot=few_shot,
+                model=openai_model,
+                client=openai_client,
+            )
+        except Exception as e:
+            print(
+                f"  OpenAI summary fallback failed: {type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
+
+    if allow_local_fallback:
+        return extractive_fallback_summary(title=title, text=text)
+
+    if claude_error is not None:
+        raise claude_error
+    raise RuntimeError("No summary provider was available")
+
+
+_TOPIC_SENTENCE_SYSTEM = (
+    "You pick ONE sentence from a news/research article for an education "
+    "newsletter — the sentence that best captures what the article is about "
+    "(what happened / what the research shows).\n"
+    "Rules:\n"
+    "- Copy an existing sentence EXACTLY (verbatim). Do NOT write, paraphrase, "
+    "shorten, or combine sentences.\n"
+    "- It may be the opening sentence or a later one — whichever best conveys "
+    "the point. Skip only pure navigation/boilerplate or datelines.\n"
+    "- The sentence must stand on its own and be a real, full sentence.\n"
+    "- If no single sentence does this well, reply with exactly: NONE\n"
+    "- Output only the sentence (or NONE), nothing else."
+)
+
+
+def _normalise_for_match(s: str) -> str:
+    """Lowercase + strip punctuation + collapse whitespace, for checking whether
+    an extracted sentence really appears in the body (tolerates quote/spacing
+    differences from HTML extraction)."""
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", (s or "").lower())).strip()
+
+
+def extract_topic_sentence(*, title: str, text: str,
+                           model: str = DEFAULT_MODEL, client=None) -> str:
+    """Best-effort extractive key sentence, copied VERBATIM from the article
+    body. **Falls back to the article TITLE** when there's no real body, when
+    the model can't find a genuine sentence, or when what it returns isn't
+    actually in the text — so the curator never sees a fabricated line or a bare
+    "Summary unavailable". Curator feedback: prefer the
+    article's own words; defer to the title when there's nothing to extract."""
+    title_fallback = re.sub(r"\s+", " ", (title or "").strip()) or PLACEHOLDER
+    body = (text or "").strip()
+    if len(body) < 200:        # no real article body to quote — use the title
+        return title_fallback
+    if client is None:
+        from src.inference.anthropic_client import make_anthropic_client
+        client = make_anthropic_client(5)   # IPv4-forced; picks up ANTHROPIC_API_KEY
+
+    user = (
+        f"TITLE: {title}\n\nARTICLE:\n{body[:6000]}\n\n"
+        "Return the single best sentence (verbatim), or NONE."
+    )
+    try:
+        resp = client.messages.create(
+            model=model,
+            max_tokens=200,
+            temperature=0,   # deterministic extraction
+            system=_TOPIC_SENTENCE_SYSTEM,
+            messages=[{"role": "user", "content": user}],
+        )
+        result = resp.content[0].text.strip()
+    except Exception as e:
+        # Claude/proxy unreachable: defer to the title rather than raising, so
+        # a caller's sweep leaves a usable topic line instead of a NULL that the
+        # dashboard renders blank (mirrors the summary fallback ladder).
+        import sys
+        print(
+            f"  topic sentence: Claude unreachable, using title: {type(e).__name__}",
+            file=sys.stderr,
+        )
+        return title_fallback
+    if not result or result.strip().upper() == "NONE" or _looks_like_refusal(result):
+        return title_fallback
+    # Verbatim guard: the sentence must actually appear in the body, else the
+    # model paraphrased or invented it — fall back to the real title.
+    if _normalise_for_match(result) not in _normalise_for_match(body):
+        return title_fallback
+    return result
+
+
+def extract_topic_sentence_openai(*, title: str, text: str,
+                                  model: str | None = None, client=None) -> str:
+    """OpenAI twin of extract_topic_sentence: same verbatim-or-title contract.
+
+    Used when OpenAI is the configured enrichment provider (e.g. on the GitHub
+    runner, which cannot reach Claude). Defers to the article title when there
+    is no real body, the model finds nothing, or the returned sentence is not
+    verbatim in the body — so the topic line is never blank or fabricated."""
+    title_fallback = re.sub(r"\s+", " ", (title or "").strip()) or PLACEHOLDER
+    body = (text or "").strip()
+    if len(body) < 200:
+        return title_fallback
+    if client is None:
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("OPENAI_API_KEY is not set")
+        from openai import OpenAI
+        client = OpenAI(timeout=60.0, max_retries=2)
+
+    user = (
+        f"TITLE: {title}\n\nARTICLE:\n{body[:6000]}\n\n"
+        "Return the single best sentence (verbatim), or NONE."
+    )
+    try:
+        response = client.responses.create(
+            model=_openai_summary_model(model),
+            instructions=_TOPIC_SENTENCE_SYSTEM,
+            input=user,
+            max_output_tokens=200,
+        )
+        result = (getattr(response, "output_text", "") or "").strip()
+    except Exception as e:
+        print(
+            f"  topic sentence: OpenAI unreachable, using title: {type(e).__name__}",
+            file=sys.stderr,
+        )
+        return title_fallback
+    if not result or result.strip().upper() == "NONE" or _looks_like_refusal(result):
+        return title_fallback
+    if _normalise_for_match(result) not in _normalise_for_match(body):
+        return title_fallback
+    return result
+
+
+def _looks_like_refusal(s: str) -> bool:
+    """True if the model returned a meta/refusal response rather than a summary."""
+    if not s:
+        return True
+    head = s.lower()[:80]
+    return any(p in head for p in (
+        "i cannot", "i can't", "i'd be happy", "i don't have", "i would need",
+        "i am unable", "i'm unable", "could you provide", "could you share",
+        "the article content", "the article appears", "please share",
+        "please provide", "i appreciate the request",
+    ))
+
+
+# ─── Enrichment: geographic_focus + topic_tags ───────────────────────────────
+
+_ENRICH_SYSTEM = """You tag UK education-newsletter articles. The newsletter covers \
+UK schools, FE, and pre-HE education (NOT higher education).
+
+For each article, return STRICT JSON with these two fields and no commentary:
+
+- "geographic_focus": exactly one of "England", "Scotland", "Wales", \
+"Northern Ireland", "UK-wide", "International".
+- "topic_tags": list of EXACTLY 3 lowercase, hyphen-separated tags. Examples: \
+"send", "teacher-pay", "ai-in-classrooms", "raac", "child-poverty", \
+"ofsted-inspections", "school-funding", "mental-health", "exam-results". \
+Pick tags that are specific enough to be filter-useful but standardised \
+(reuse common tags rather than inventing new ones). Always return exactly 3.
+
+Output ONLY the JSON object. No markdown fences, no preamble."""
+
+
+def tag_article(*, title: str, text: str, model: str = DEFAULT_MODEL,
+                client=None) -> dict:
+    """Return {"geographic_focus": str, "topic_tags": list[str]} for one article.
+
+    Separate from `summarise_article` so the curator-voice summary stays
+    style-anchored on few-shot examples while tagging gets a tight structured
+    prompt. Cheap — ~$0.0005 per call with prompt caching.
+
+    On parse failure returns {"geographic_focus": "", "topic_tags": []} rather
+    than raising — the scrape pipeline shouldn't break on a single bad article.
+    """
+    import json
+    if client is None:
+        from src.inference.anthropic_client import make_anthropic_client
+        client = make_anthropic_client(5)
+
+    body_truncated = " ".join((text or "").split()[:TEXT_TRUNCATE_WORDS])
+    user_prompt = f"TITLE: {title}\n\nTEXT: {body_truncated}"
+
+    try:
+        resp = client.messages.create(
+            model=model,
+            max_tokens=200,
+            temperature=0.0,  # determinism — same article → same tags
+            system=[{
+                "type": "text",
+                "text": _ENRICH_SYSTEM,
+                "cache_control": {"type": "ephemeral"},
+            }],
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        raw = resp.content[0].text.strip()
+        # Strip code fences if Claude added them despite the instruction
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        parsed = json.loads(raw)
+        return {
+            "geographic_focus": (parsed.get("geographic_focus") or "").strip(),
+            "topic_tags": [
+                t.strip().lower() for t in (parsed.get("topic_tags") or [])
+                if isinstance(t, str) and t.strip()
+            ][:3],
+        }
+    except Exception as e:
+        import sys
+        print(f"  tag_article failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return {"geographic_focus": "", "topic_tags": []}
+
+
+def _parse_tag_json(raw: str) -> dict:
+    """Parse the {geographic_focus, topic_tags} JSON emitted by either provider,
+    tolerating stray code fences. Returns the empty shape on any parse failure."""
+    import json
+    raw = (raw or "").strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    parsed = json.loads(raw)
+    return {
+        "geographic_focus": (parsed.get("geographic_focus") or "").strip(),
+        "topic_tags": [
+            t.strip().lower() for t in (parsed.get("topic_tags") or [])
+            if isinstance(t, str) and t.strip()
+        ][:3],
+    }
+
+
+def tag_article_openai(*, title: str, text: str, model: str | None = None,
+                       client=None) -> dict:
+    """OpenAI twin of tag_article. Used when OpenAI is the configured provider.
+
+    Same contract: returns {"geographic_focus": str, "topic_tags": list[str]},
+    and returns the empty shape rather than raising on any failure so a single
+    bad article never breaks the enrichment sweep."""
+    if client is None:
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("OPENAI_API_KEY is not set")
+        from openai import OpenAI
+        client = OpenAI(timeout=60.0, max_retries=2)
+
+    body_truncated = " ".join((text or "").split()[:TEXT_TRUNCATE_WORDS])
+    user_prompt = f"TITLE: {title}\n\nTEXT: {body_truncated}"
+    try:
+        response = client.responses.create(
+            model=_openai_summary_model(model),
+            instructions=_ENRICH_SYSTEM,
+            input=user_prompt,
+            max_output_tokens=200,
+        )
+        return _parse_tag_json(getattr(response, "output_text", ""))
+    except Exception as e:
+        import sys
+        print(f"  tag_article_openai failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return {"geographic_focus": "", "topic_tags": []}
+
+
+# ─── Provider-aware enrichment entry points ──────────────────────────────────
+# The GitHub runner cannot reliably reach Claude (even via the HF Space proxy;
+# some runners cannot reach every provider, but they may reach OpenAI fine. Setting
+# ENRICH_PROVIDER=openai on the runner makes OpenAI the primary enrichment
+# provider there, with Claude kept as a best-effort fallback. Dev, the Streamlit
+# dashboard and the Space leave it unset, so they keep Claude-first behaviour
+# (better editorial voice + prompt-cache savings).
+
+def enrich_provider() -> str:
+    """'claude' (default) or 'openai', from the ENRICH_PROVIDER env var."""
+    return (os.environ.get("ENRICH_PROVIDER") or "claude").strip().lower()
+
+
+def enrich_summary(*, title: str, text: str, category: str | None = None,
+                   client=None, openai_client=None) -> str:
+    """Provider-aware summary. OpenAI-primary when ENRICH_PROVIDER=openai
+    (OpenAI → Claude → extractive), else the default Claude → OpenAI → extractive."""
+    if enrich_provider() == "openai" and os.environ.get("OPENAI_API_KEY"):
+        try:
+            return summarise_article_openai(
+                title=title, text=text, category=category, client=openai_client,
+            )
+        except Exception as e:
+            print(f"  OpenAI summary failed; trying Claude: {type(e).__name__}",
+                  file=sys.stderr)
+        # Claude + extractive tail (OpenAI already tried above → disable it here).
+        return summarise_article(
+            title=title, text=text, category=category, client=client,
+            allow_openai_fallback=False,
+        )
+    return summarise_article(
+        title=title, text=text, category=category,
+        client=client, openai_client=openai_client,
+    )
+
+
+def enrich_tags(*, title: str, text: str, client=None, openai_client=None) -> dict:
+    """Provider-aware {geographic_focus, topic_tags}. Tries the configured
+    primary, then the other provider if the primary returns nothing. Never
+    raises (each primitive returns the empty shape on failure)."""
+    have_openai = bool(os.environ.get("OPENAI_API_KEY"))
+    have_claude = bool(os.environ.get("ANTHROPIC_API_KEY"))
+
+    def _nonempty(t: dict) -> bool:
+        return bool(t.get("geographic_focus") or t.get("topic_tags"))
+
+    if enrich_provider() == "openai" and have_openai:
+        tags = tag_article_openai(title=title, text=text, client=openai_client)
+        if _nonempty(tags) or not have_claude:
+            return tags
+        return tag_article(title=title, text=text, client=client)
+
+    if have_claude:
+        tags = tag_article(title=title, text=text, client=client)
+        if _nonempty(tags) or not have_openai:
+            return tags
+        return tag_article_openai(title=title, text=text, client=openai_client)
+
+    if have_openai:
+        return tag_article_openai(title=title, text=text, client=openai_client)
+    return {"geographic_focus": "", "topic_tags": []}
+
+
+def enrich_topic_sentence(*, title: str, text: str, client=None,
+                          openai_client=None) -> str:
+    """Provider-aware topic sentence. Both providers defer to the article title
+    when there is no body, no genuine sentence, or the model is unreachable."""
+    if enrich_provider() == "openai" and os.environ.get("OPENAI_API_KEY"):
+        return extract_topic_sentence_openai(
+            title=title, text=text, client=openai_client,
+        )
+    return extract_topic_sentence(title=title, text=text, client=client)
+
+
+def summarise_batch(items: list[dict], *, model: str = DEFAULT_MODEL,
+                    seed: int | None = None,
+                    on_progress=None) -> list[dict]:
+    """Summarise a batch of articles.
+
+    `items` is a list of dicts with keys: url, title, text_clean (or text), category.
+    Returns the same dicts with a `summary` key added.
+
+    Reuses the same client + few-shot examples across the batch so prompt
+    caching kicks in from the 2nd article onwards.
+    """
+    from src.inference.anthropic_client import make_anthropic_client
+    client = make_anthropic_client()
+    few_shot = _load_few_shot_examples(seed=seed)
+
+    out = []
+    for i, item in enumerate(items, 1):
+        title = item.get("title") or ""
+        body = item.get("text_clean") or item.get("text") or ""
+        category = item.get("category") or item.get("top1") or ""
+        summary = summarise_article(
+            title=title, text=body, category=category,
+            few_shot=few_shot, model=model, client=client,
+        )
+        out.append({**item, "summary": summary})
+        if on_progress:
+            on_progress(i, len(items), item, summary)
+    return out
+
+
+# ─── Cost estimation ─────────────────────────────────────────────────────────
+
+def estimate_cost(items: list[dict], model: str = DEFAULT_MODEL) -> dict:
+    """Approximate input/output token counts and dollar cost for a batch.
+    Uses word-count × 1.3 as a rough token estimate (overestimate is fine).
+    """
+    few_shot = _load_few_shot_examples()
+    sys_text = SYSTEM_PROMPT + " ".join(ex["text"] for ex in few_shot)
+    sys_tokens = int(len(sys_text.split()) * 1.3)
+
+    per_article_input = 0
+    per_article_output = DEFAULT_MAX_TOKENS  # upper bound, summaries usually shorter
+    for item in items:
+        body = item.get("text_clean") or item.get("text") or ""
+        body_words = min(TEXT_TRUNCATE_WORDS, len(body.split()))
+        title_words = len((item.get("title") or "").split())
+        per_article_input += int((body_words + title_words + 50) * 1.3)  # +50 for prompt scaffolding
+
+    # First call pays full input price for system; subsequent calls pay cached price
+    n = max(len(items), 1)
+    cached_input = sys_tokens * (n - 1)
+    fresh_input = sys_tokens + per_article_input
+
+    cost_fresh = fresh_input  / 1_000_000 * PRICE_INPUT_USD_PER_M
+    cost_cached = cached_input / 1_000_000 * PRICE_CACHED_INPUT_USD_PER_M
+    cost_output = per_article_output * n / 1_000_000 * PRICE_OUTPUT_USD_PER_M
+    total = cost_fresh + cost_cached + cost_output
+
+    return {
+        "n_articles": n,
+        "system_tokens": sys_tokens,
+        "fresh_input_tokens": fresh_input,
+        "cached_input_tokens": cached_input,
+        "output_tokens_max": per_article_output * n,
+        "cost_usd_max": round(total, 4),
+        "cost_per_article_usd_max": round(total / n, 6),
+        "model": model,
+    }
+
+
+# ─── CLI ─────────────────────────────────────────────────────────────────────
+
+def main() -> int:
+    """Standalone CLI mode. Reads a CSV of accepted articles and writes summaries
+    to a new CSV. NOT part of the cron pipeline — invoked by the dashboard or
+    manually for testing.
+
+    Usage:
+      python -m src.inference.summarise --input <csv> --dry-run
+      python -m src.inference.summarise --input <csv> --output <csv>
+    """
+    from dotenv import load_dotenv
+    import pandas as pd
+
+    load_dotenv()
+
+    parser = argparse.ArgumentParser(description="LLM summarise accepted newsletter articles.")
+    parser.add_argument("--input", type=Path, required=True,
+                        help="CSV of accepted articles (must have title + text_clean cols)")
+    parser.add_argument("--output", type=Path,
+                        help="Where to write the summaries (CSV). Default: <input>.summarised.csv")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Seed for few-shot example sampling (reproducibility)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Estimate cost without calling a model. Print and exit.")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Only summarise the first N rows (testing)")
+    args = parser.parse_args()
+
+    if not args.input.exists():
+        print(f"  ERROR: {args.input} not found")
+        return 1
+
+    df = pd.read_csv(args.input)
+    if args.limit:
+        df = df.head(args.limit)
+    items = df.to_dict(orient="records")
+    print(f"  Loaded {len(items)} accepted articles from {args.input}")
+
+    est = estimate_cost(items, model=args.model)
+    print(f"\n  Estimated cost ({args.model}):")
+    for k, v in est.items():
+        print(f"    {k}: {v}")
+
+    if args.dry_run:
+        print("\n  --dry-run: not calling the API. Done.")
+        return 0
+
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print("  ERROR: ANTHROPIC_API_KEY not set in .env")
+        return 1
+
+    def _progress(i, n, item, summary):
+        title = (item.get("title") or "")[:60]
+        print(f"  [{i}/{n}] {title}")
+        print(f"           → {summary[:120]}{'…' if len(summary) > 120 else ''}")
+
+    out_items = summarise_batch(items, model=args.model, seed=args.seed, on_progress=_progress)
+
+    output = args.output or args.input.with_suffix(".summarised.csv")
+    pd.DataFrame(out_items).to_csv(output, index=False)
+    print(f"\n  Wrote {len(out_items)} summaries → {output}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

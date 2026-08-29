@@ -1,0 +1,25 @@
+{
+  "name": "AM2 ERP Newsletter Automation",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+
+  "postCreateCommand": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/AM2_erp_programme_automataion/.venv/bin/python",
+        "python.terminal.activateEnvironment": true
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "VIRTUAL_ENV_DISABLE_PROMPT": "1"
+  },
+
+  "forwardPorts": [8888]
+}

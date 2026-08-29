@@ -1,0 +1,2 @@
+source_id,name,homepage,type,category,feed_url,listing_url,notes,owner_note,status
+example_feed,Example Feed,https://example.org,rss,example,https://example.org/feed.xml,,Replace with real source.,,disabled
