@@ -62,8 +62,10 @@ def _to_records(items) -> list[dict]:
     return out
 
 
-def _scrape_one(src: dict, *, since: date | None, until: date | None) -> tuple[list, bool, list | None]:
-    """Call the scraper for one source and return (items, apply_filter, require_keywords).
+def _scrape_one(src: dict, *, since: date | None,
+                until: date | None) -> tuple[list, bool, list | None, bool]:
+    """Call the scraper for one source and return
+    (items, apply_filter, require_keywords, match_body).
     Filter params are popped from `params` here so individual scrapers never see them —
     filtering is applied centrally in `_filter_items` after this returns.
     """
@@ -75,6 +77,11 @@ def _scrape_one(src: dict, *, since: date | None, until: date | None) -> tuple[l
     # Centralised relevance-filter config: pop from params so scrapers don't see it.
     apply_filter = bool(params.pop("apply_relevance_filter", False))
     require_keywords = params.pop("require_keywords", None)
+    # match_body: search the body as well as the title. Off by default — for a
+    # general-news or whole-department feed a passing mention of "AI" is noise.
+    # Set it on sources whose entire output is already roughly in scope but
+    # whose headlines are oblique, where title-only silently loses real items.
+    match_body = bool(params.pop("match_body", False))
 
     if src["type"] == "newsletter":
         ingestion = src.get("ingestion", "disk")
@@ -98,11 +105,12 @@ def _scrape_one(src: dict, *, since: date | None, until: date | None) -> tuple[l
     else:
         raise RuntimeError(f"unknown source type {src['type']}")
 
-    return items, apply_filter, require_keywords
+    return items, apply_filter, require_keywords, match_body
 
 
 def _filter_items(items: list, source: str,
-                  apply_filter: bool, require_keywords: list | None) -> list:
+                  apply_filter: bool, require_keywords: list | None,
+                  match_body: bool = False) -> list:
     """Apply the education-relevance filter to Article items. Centralised here so
     every scraper type (rss_adapter, auto_listing, custom HTML scrapers) gets the
     same behaviour with one flip of `apply_relevance_filter: true` in sources.yml.
@@ -243,11 +251,22 @@ def _filter_items(items: list, source: str,
             )
             n_rejected_country += 1
             continue
-        # Education keyword match — TITLE ONLY. Body matches were letting
-        # general-politics pieces through whenever they mentioned "schools"
-        # or "education" in passing.
+        # Relevance keyword match. TITLE ONLY by default: a passing mention in
+        # the body of a general-news or whole-department feed is noise, and
+        # that is why DSIT broadband contracts and GOV.UK tribunal judgments
+        # are correctly dropped.
+        #
+        # `match_body: true` widens it to title OR body for sources whose whole
+        # output is already roughly in scope but whose headlines are oblique.
+        # Measured 2026-08-29: title-only lost 51 of 548 items (9%) on filtered
+        # feeds, including LessWrong's "METR and Redwood Offer Holy #%^@
+        # Postmortem Of The HuggingFace Hack" — no keyword in the title, and
+        # squarely on-topic.
         title = (item.title or "").lower()
         matched = [kw for kw, p in zip(kws, patterns) if p.search(title)]
+        if not matched and match_body:
+            body = ((item.text_clean or item.text or "")[:4000]).lower()
+            matched = [kw for kw, p in zip(kws, patterns) if p.search(body)]
         if matched:
             kept.append(item)
             if is_broad_domain(item.url) and not apply_filter:
@@ -266,7 +285,8 @@ def _filter_items(items: list, source: str,
     if n_rejected_country:
         print(f"  {source}: {n_rejected_country} dropped as non-UK content")
     if n_rejected_kw:
-        print(f"  {source}: {n_rejected_kw} dropped — no edu keyword in title")
+        where = "title or body" if match_body else "title"
+        print(f"  {source}: {n_rejected_kw} dropped — no relevance keyword in {where}")
     if n_broad_filtered:
         print(f"  {source}: {n_broad_filtered} broad-domain items passed the keyword filter")
     return kept
@@ -406,9 +426,14 @@ def _generate_summaries(items: list, source: str, *, dry_run: bool = False) -> N
 
 
 def _weekly_windows(start: date, end: date) -> list[tuple[date, date]]:
-    """Yield (since, until) tuples, each a Tuesday-anchored 7-day week, walking forward."""
-    # Snap to the Tuesday on/before `start`
-    days_to_tue = (start.weekday() - 1) % 7  # Mon=0, Tue=1; snap back to Tue
+    """Yield (since, until) tuples, each an anchor-aligned 7-day week, walking forward.
+
+    The anchor weekday comes from `week.anchor_day` in config/domain.yml
+    (Friday for this tracker), so backfill windows line up exactly with the
+    weeks the dashboard shows and the newsletter covers."""
+    # Snap back to the anchor weekday on/before `start`
+    from src.scraping.common import week_anchor
+    days_to_tue = (start.weekday() - week_anchor()) % 7
     from datetime import timedelta
     cur = start - timedelta(days=days_to_tue)
     weeks: list[tuple[date, date]] = []
@@ -434,7 +459,7 @@ def main():
     parser.add_argument("--sources-yml", default=None,
                         help="Path to sources.yml (defaults to src/scraping/sources.yml)")
     parser.add_argument("--weekly-backfill", action="store_true",
-                        help="Iterate Tuesday-anchored 7-day weeks from --since to --until, "
+                        help="Iterate anchor-aligned 7-day weeks from --since to --until, "
                              "one run per week. Use with --since to walk weeks forward.")
     parser.add_argument("--since-last-run", action="store_true",
                         help="Set --since to the started_at of the most recent successful "
@@ -469,7 +494,7 @@ def main():
             args.since = date.today() - timedelta(days=7)
             print(f"--since-last-run: lookup failed ({e}); defaulting to 7 days ago ({args.since})")
 
-    # Weekly-backfill mode: split [--since, --until] into Tuesday-anchored weeks and
+    # Weekly-backfill mode: split [--since, --until] into anchor-aligned weeks and
     # invoke the per-source loop once per week. Useful for staged backfill.
     if args.weekly_backfill:
         if not args.since:
@@ -527,10 +552,11 @@ def _execute_run(args):
         status = "ok"
         error: str | None = None
         try:
-            items, apply_filter, require_keywords = _scrape_one(
+            items, apply_filter, require_keywords, match_body = _scrape_one(
                 src, since=args.since, until=args.until
             )
-            items = _filter_items(items, name, apply_filter, require_keywords)
+            items = _filter_items(items, name, apply_filter, require_keywords,
+                                  match_body=match_body)
             # Drop articles already handled by an earlier source this run, BEFORE
             # the costly body-backfill + enrichment. Same URL = same article.
             deduped = []

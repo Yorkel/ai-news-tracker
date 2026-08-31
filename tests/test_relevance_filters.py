@@ -59,10 +59,33 @@ def test_country_veto_is_disabled_for_this_tracker():
 
 
 def test_approved_domain_gate_fails_closed():
-    """Until approved_domains is populated in config/domain.yml, every article
-    is rejected. This is the expected pre-sources state, not a bug — but it is
-    the reason a fresh tracker ingests nothing."""
-    assert is_approved_domain("https://openai.com/index/x") is False
+    """The gate rejects anything not explicitly listed in approved_domains.
+    Was written against the empty pre-sources roster; now that the roster is
+    populated it asserts the property that mattered all along — unlisted
+    domains are dropped, so a new source needs a deliberate config change."""
+    assert is_approved_domain("https://example-not-a-source.com/x") is False
+    # NOTE: bbc.co.uk used to stand in for "an obvious news site we do not
+    # follow". It became an approved source on 2026-08-29 when mainstream tech
+    # coverage was added, so the example had to change to something that will
+    # never be a source.
+    assert is_approved_domain("https://some-random-blog.example/x") is False
+    # Exact netloc match: a subdomain does NOT inherit its parent's approval.
+    assert is_approved_domain("https://openai.com/index/x") is True
+    assert is_approved_domain("https://careers.openai.com/x") is False
+
+
+def test_approved_domains_match_the_source_roster():
+    """Every source in sources.yml must have its article domain approved, or it
+    silently scrapes and then drops everything. aisnakeoil.com is the live
+    example: the feed lives there but items resolve to normaltech.ai."""
+    import yaml
+    from pathlib import Path
+    approved = set(
+        yaml.safe_load(Path("config/domain.yml").read_text())["relevance"]["approved_domains"]
+    )
+    for host in ("normaltech.ai", "gds.blog.gov.uk", "gov.uk", "arxiv.org"):
+        assert host in approved, host
+    assert "aisnakeoil.com" not in approved
 
 
 def test_default_keywords_come_from_domain_config():

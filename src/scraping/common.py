@@ -72,14 +72,55 @@ class Article:
         return {k: v for k, v in rec.items() if v is not None}
 
 
-def scrape_week(d: date) -> int:
-    """Return the Tue–Mon scrape-week number for date `d`.
+_WEEKDAYS = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6,
+}
 
-    The newsletter pipeline scrapes Tuesday morning through Monday, so an
-    article published on a Monday belongs to the scrape-week that started
-    the previous Tuesday — not the ISO week (Mon–Sun) that starts that day.
+
+def week_anchor() -> int:
+    """Weekday index the publishing week starts on (Mon=0 … Sun=6).
+
+    Read from `week.anchor_day` in config/domain.yml so the scrape, the
+    dashboard, the weekly reset and the health check cannot drift apart.
+    Defaults to Friday if the config is missing or unreadable.
     """
-    return (d - timedelta(days=1)).isocalendar().week
+    try:
+        from src.scraping.domain_config import load_domain_config
+        cfg = load_domain_config() or {}
+        name = str((cfg.get("week") or {}).get("anchor_day", "friday")).strip().lower()
+        return _WEEKDAYS.get(name, 4)
+    except Exception:
+        return 4
+
+
+def anchor_on_or_before(d: date) -> date:
+    """The most recent anchor weekday on or before `d` — the start of d's week."""
+    return d - timedelta(days=(d.weekday() - week_anchor()) % 7)
+
+
+def last_anchor(today: date | None = None) -> date:
+    """Start of the CURRENT publishing week: the most recent anchor strictly
+    before `today`. On the anchor day itself this returns the previous one, so
+    a run on publication day covers the week just finished rather than an
+    empty one."""
+    today = today or date.today()
+    offset = (today.weekday() - week_anchor()) % 7
+    if offset == 0:
+        offset = 7
+    return today - timedelta(days=offset)
+
+
+def scrape_week(d: date) -> int:
+    """Return the scrape-week number for date `d`.
+
+    The week runs from the anchor weekday (see week_anchor()) to the day
+    before, so an article published the day before the anchor belongs to the
+    week that STARTED on the previous anchor — not the ISO week (Mon–Sun).
+    Implemented by shifting `d` back onto a Monday-aligned week before asking
+    for its ISO week number.
+    """
+    return (d - timedelta(days=week_anchor())).isocalendar().week
 
 
 # Query params that are noise for de-duplication — same article, different URL.

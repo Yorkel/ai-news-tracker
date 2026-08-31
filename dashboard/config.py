@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+
+from dashboard import palette as _p
 from pathlib import Path
 from typing import Any
 
@@ -33,12 +35,15 @@ CATEGORY_ORDER = list(_LABELS.get("order", [])) or [
 CATEGORY_LABELS = dict(_LABELS.get("display", {})) or {key: key.replace("_", " ").title() for key in CATEGORY_ORDER}
 CATEGORY_SHORT_LABELS = dict(_LABELS.get("short", {})) or CATEGORY_LABELS.copy()
 CATEGORY_COLORS = dict(_LABELS.get("colors", {})) or {
-    "policy": "#3B6EA8",
-    "research": "#4F8A5B",
-    "practice": "#8A6FB0",
-    "technology": "#2E8C9E",
-    "workforce": "#C9793A",
-    "other": "#667085",
+    # Fallback only — config/domain.yml supplies the real category colours.
+    # These are the inherited education labels, kept sunset-consistent so a
+    # missing/omitted domain.yml never reintroduces the old blue-green scheme.
+    "policy": _p.INFO,
+    "research": _p.INK_SOFT,
+    "practice": _p.CORAL,
+    "technology": _p.GOLD,
+    "workforce": _p.ACCENT,
+    "other": _p.PENDING,
 }
 
 SOURCE_LABELS = {
@@ -66,9 +71,8 @@ def source_label(src) -> str:
     return base.title() if base else s
 
 
-NAVY = "#1F2937"
-TEAL = "#2E8C9E"
-LIGHT_BLUE = "#3B82F6"
-MID_BLUE = "#374151"
+# Colour now lives in dashboard/palette.py — the single source of truth.
+# Re-exported here so existing `from dashboard.config import NAVY` keeps working.
+from dashboard.palette import NAVY, TEAL, LIGHT_BLUE, MID_BLUE  # noqa: E402,F401
 
 MS_FORM_URL = os.environ.get("MS_FORM_URL", "")

@@ -1,15 +1,1125 @@
 # AI News Tracker — source roster.
 #
-# NOT YET POPULATED. Adding entries here is only half the job: a source's
-# articles are still dropped unless its domain is also listed under
-# relevance.approved_domains in config/domain.yml (run.py fails closed).
+# Derived 2026-08-29 from two empirical repos (01_GRAND_CHALLENGES and CADENCE),
+# cross-checked against Yorkel/ai_tracker. Every feed below was validated through
+# feedparser — the same library rss_adapter uses — and had a non-zero entry count
+# and a plausible latest-item date on 2026-08-29. Feeds that merely returned
+# HTTP 200 with valid XML were NOT accepted: see ada_lovelace under KNOWN GAPS.
 #
-# Workflow for each new source:
-#   1. Add the entry below with `disabled: true`.
-#   2. Add its domain to approved_domains in config/domain.yml.
-#   3. Test it:  python -m src.scraping.try_source <name>
-#   4. Flip `disabled: false` once the output looks right.
+# EVERYTHING IS disabled: true. Per README, test each one before enabling:
+#   1. Confirm its domain is in relevance.approved_domains in config/domain.yml.
+#   2. python -m src.scraping.try_source <name>
+#   3. Flip `disabled: false` once the output looks right.
+#
+# apply_relevance_filter: true is set on publishers that cover many topics, so
+# an item must also match a relevance keyword. Feeds that are already
+# AI-scoped by construction do not carry it.
 #
 # type: rss | web | newsletter | google_alert
 
-sources: []
+sources:
+
+  # ─────────────────────────────────────────────────────────────────────
+  # UK government and regulators
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: govuk_ai_search
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.gov.uk/search/all.atom?keywords=artificial+intelligence"}
+    disabled: false
+    # Keyword search across ALL of gov.uk — already AI-scoped, so no extra filter.
+    # Widest single net for UK government AI output. 10 entries, current.
+
+  - name: dsit
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.gov.uk/government/organisations/department-for-science-innovation-and-technology.atom"
+      apply_relevance_filter: true
+    disabled: false
+    # Tier 1 in both source reports. Covers all DSIT work, not just AI.
+
+  - name: ai_security_institute
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.gov.uk/government/organisations/ai-safety-institute.atom"}
+    disabled: false
+    # ⚠️ 20 entries but latest is 2025-10-22 — ~10 months stale. CADENCE flagged
+    # that the AI Safety → AI Security Institute rename may have moved output to
+    # a new gov.uk org page. Verify before trusting; the live page may differ.
+
+  - name: cabinet_office
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.gov.uk/government/organisations/cabinet-office.atom"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: gds_blog
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://gds.blog.gov.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # GDS: 79 mentions in 01_GRAND_CHALLENGES. Note gds.blog.gov.uk is a
+    # separate netloc from gov.uk — approved_domains is exact-match.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # EU and Ireland — this is the coverage the other trackers lack
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: ec_digital_strategy
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://digital-strategy.ec.europa.eu/en/rss.xml"}
+    disabled: false
+    # AI Act implementation. European Commission was the single most-mentioned
+    # body in 01_GRAND_CHALLENGES (183).
+
+  - name: edpb
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.edpb.europa.eu/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: coimisiun_na_mean
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.cnam.ie/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: iccl
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.iccl.ie/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # 58 mentions. Irish civil society lead on surveillance and adtech.
+
+  - name: ronan_kennedy
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rkennedy.ie/feed/"}
+    disabled: false
+    # Low volume (3 entries). ⭐ The homepage 403s but the feed serves fine —
+    # a blocked site does not imply a blocked feed.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Governance institutes and research orgs
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: govai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.governance.ai/post/rss.xml"}
+    disabled: false
+    # Feed path discovered from the homepage <link rel="alternate">, not guessed.
+
+  - name: tech_policy_press
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://techpolicy.press/rss/feed.xml"}
+    disabled: false
+    # Discovered, not guessed. 3898 entries — full archive, not a 100-item
+    # window. Use a narrow --since on first run or it ingests years at once.
+
+  - name: metr
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://metr.org/feed.xml"}
+    disabled: false
+
+  - name: nist
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.nist.gov/news-events/news/rss.xml"
+      apply_relevance_filter: true
+    disabled: false
+    # All NIST news, most of it not AI. Filter is essential here.
+
+  - name: institute_for_government
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.instituteforgovernment.org.uk/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: ai4people
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://ai4people.org/feed/"}
+    disabled: false
+    # ⚠️ Latest 2026-03-05 — low frequency. 01_GRAND_CHALLENGES flags this as
+    # industry co-produced (contributor list mixes academics with Fujitsu and
+    # Airbus staff). Keep, but treat provenance as a property of the item.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Civil society
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: public_law_project
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://publiclawproject.org.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: big_brother_watch
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://bigbrotherwatch.org.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: connected_by_data
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://connectedbydata.org/feed.xml"}
+    disabled: false
+
+  - name: we_and_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://weandai.org/feed/"}
+    disabled: false
+    # Low frequency — latest 2026-06-26.
+
+  - name: mozilla
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://blog.mozilla.org/en/feed/"
+      apply_relevance_filter: true
+    disabled: false
+    # Reported as 403-blocked; that was a curl user-agent artefact. feedparser's
+    # own default UA retrieves it fine. Mostly browser/product news — filter on.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Media and analysis
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: mit_tech_review_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"}
+    disabled: false
+    # ⚠️ Metered paywall — bodies may be truncated even though the feed is open.
+
+  - name: guardian_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.theguardian.com/technology/artificialintelligenceai/rss"}
+    disabled: false
+
+  - name: conversation_uk_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://theconversation.com/uk/technology/articles.atom"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: rte_brainstorm
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.rte.ie/feeds/rss/?index=/brainstorm/"
+      apply_relevance_filter: true
+    disabled: false
+    # 100 entries across every subject RTÉ covers. Filter is doing real work.
+
+  - name: lighthouse_reports
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.lighthousereports.com/feed/"}
+    disabled: false
+    # Investigative work on algorithmic systems in government.
+
+  - name: platformer
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.platformer.news/rss/"}
+    disabled: false
+    # The only industry-lane source CADENCE kept.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Independent analysts and newsletters
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: normal_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.aisnakeoil.com/feed"}
+    disabled: false
+    # ⭐ Ranked #1 for the evaluation lane by CADENCE. The feed redirects and its
+    # items resolve to normaltech.ai — Narayanan and Kapoor renamed AI Snake Oil
+    # to Normal Tech. approved_domains must list normaltech.ai, NOT aisnakeoil.com.
+
+  - name: import_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://importai.substack.com/feed"}
+    disabled: false
+
+  - name: interconnects
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.interconnects.ai/feed"}
+    disabled: false
+
+  - name: transformer
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.transformernews.ai/feed"}
+    disabled: false
+
+  - name: dont_worry_about_the_vase
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://thezvi.substack.com/feed"}
+    disabled: false
+
+  - name: cais_safety_newsletter
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://newsletter.safe.ai/feed"}
+    disabled: false
+    # CADENCE could not resolve this domain and told you not to guess. Found and
+    # verified: 20 entries, latest 2026-08-18.
+
+  - name: blood_in_the_machine
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.bloodinthemachine.com/feed"}
+    disabled: false
+
+  - name: simon_willison
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://simonwillison.net/atom/everything/"}
+    disabled: false
+    # High volume, link-blog style — expect many short items.
+
+  - name: lesswrong
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.lesswrong.com/feed.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # CADENCE says keep as a POSTING venue, drop as an input. Included disabled
+    # so the decision is visible rather than silently lost.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Labs and ML research
+  # ⚠️ 01_GRAND_CHALLENGES: lab announcements mislead relative to the papers —
+  # "an enormous difference between the actual research paper... and then the PR
+  # piece". Treat these as announcements and prefer the linked paper.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: openai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://openai.com/news/rss.xml"}
+    disabled: false
+    # ⚠️ 1157 entries — full archive. Narrow --since on first run.
+
+  - name: deepmind
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://deepmind.google/blog/rss.xml"}
+    disabled: false
+
+  - name: huggingface
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://huggingface.co/blog/feed.xml"
+      apply_relevance_filter: true
+    disabled: false
+    # ⚠️ 852 entries, much of it community posts. Highest noise risk here.
+
+  - name: sebastian_raschka
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://magazine.sebastianraschka.com/feed"}
+    disabled: false
+
+  - name: lilian_weng
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://lilianweng.github.io/index.xml"}
+    disabled: false
+
+  # ─────────────────────────────────────────────────────────────────────
+  # arXiv
+  # ⚠️ These return a VALID feed with ZERO items at weekends — the feed itself
+  # declares <skipDays>Saturday, Sunday</skipDays> and rebuilds at 04:00 UTC.
+  # Confirmed 2026-08-30. An empty arXiv feed on a Saturday or Sunday is the
+  # feed working correctly, NOT a failure; check the day before investigating.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: arxiv_cs_cy
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.arxiv.org/rss/cs.CY"}
+    disabled: false
+    # Computers and Society — the governance-adjacent category.
+
+  - name: arxiv_cs_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.arxiv.org/rss/cs.AI"}
+    disabled: false
+
+  - name: arxiv_cs_lg
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.arxiv.org/rss/cs.LG"}
+    disabled: false
+    # ⚠️ Very high volume. Enable last, and only with the filter tuned.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Added 2026-08-29 from AI-Governance-Analysis-UK-ROI (corpus weights in
+  # brackets = documents that issuer contributes to its 542-doc corpus) and
+  # TRACE. All validated through feedparser with non-zero entries.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: commons_library
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://commonslibrary.parliament.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # ⭐ TRACE flagged briefings that "span ALL topics" as a liability for an
+    # education corpus. For an AI tracker that is the point — it carries the
+    # AI briefings. Filter is essential.
+
+  - name: nao
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.nao.org.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # [9] ⚠️ NAO landing pages are low-text (~301 words); substance is in the
+    # linked PDF. Expect thin bodies.
+
+  - name: europarl_press
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.europarl.europa.eu/rss/doc/press-releases/en.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # [10] ⚠️ Latest item 2026-07-23 — check it is not a summer recess artefact.
+
+  - name: fra_eu
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://fra.europa.eu/en/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: edri
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://edri.org/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: access_now
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.accessnow.org/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: algorithmwatch
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://algorithmwatch.org/en/feed/"}
+    disabled: false
+
+  - name: open_rights_group
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.openrightsgroup.org/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: bruegel
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.bruegel.org/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: the_ferret
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.theferret.scot/latest/rss/"
+      apply_relevance_filter: true
+    disabled: false
+    # Scottish investigative. General-purpose — filter does the work.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Technical AI safety and evals — added 2026-08-29 from *AI_SAFETY.
+  # That report tagged its feed URLs [CONVENTION] (inferred, untested); these
+  # are the ones that actually resolved with entries. 15 of its 41 did not.
+  # ⚠️ Its standing warning: lab/announcement posts misrepresent the underlying
+  # policy ("RSP v3.0 detail comes from the policy itself and supersedes the
+  # announcement-based summary"). Prefer the linked document over the post.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: redwood_research
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://blog.redwoodresearch.org/feed"}
+    disabled: false
+    # "The frontier of AI control" per the source repo. 53 mentions.
+
+  - name: alignment_forum
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.alignmentforum.org/feed.xml"}
+    disabled: false
+
+  - name: bluedot_impact
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://blog.bluedot.org/feed"}
+    disabled: false
+
+  - name: ai_futures_project
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://blog.aifutures.org/feed"}
+    disabled: false
+    # AI 2027. ⚠️ Source repo: "one speculative forecast, not a prophecy" —
+    # forecasts are evidence about expert belief, not outcomes.
+
+  - name: forethought
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.forethought.org/feed"}
+    disabled: false
+
+  - name: ai_frontiers
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://newsletter.ai-frontiers.org/feed"}
+    disabled: false
+
+  - name: cset
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://cset.georgetown.edu/feed/"}
+    disabled: false
+
+  - name: ai_now_institute
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://ainowinstitute.org/feed"}
+    disabled: false
+
+  - name: council_strategic_risks
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://councilonstrategicrisks.org/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Covers biosecurity and climate too — filter on.
+
+  - name: eu_ai_act_tracker
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://artificialintelligenceact.eu/feed/"}
+    disabled: false
+    # Unofficial FLI-backed implementation tracker. 13 URLs in the source repo.
+
+  - name: frontier_model_forum
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.frontiermodelforum.org/feed"}
+    disabled: false
+    # ⚠️ Industry coordination body — treat provenance as a property of the item.
+
+  - name: miri
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://intelligence.org/feed/"}
+    disabled: false
+
+  - name: deepmind_safety_research
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://deepmindsafetyresearch.medium.com/feed"}
+    disabled: false
+
+  - name: forecasting_research_institute
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://forecastingresearch.substack.com/feed"}
+    disabled: false
+
+  - name: inspect_ai_releases
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://github.com/UKGovernmentBEIS/inspect_ai/releases.atom"}
+    disabled: false
+    # ⭐ UK AISI's eval framework. aisi.gov.uk itself has NO feed, so this
+    # releases.atom is the only machine-readable AISI signal found.
+    # ⚠️ Items link to github.com — a shared domain. Approving github.com
+    # approves every GitHub URL from any source, so weigh that before enabling.
+
+  - name: eighty_thousand_hours
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://feeds.transistor.fm/80000-hours-podcast"}
+    disabled: false
+    # 349 episodes — full archive. Narrow --since on first run.
+
+  - name: axrp
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://axrpodcast.libsyn.com/rss"}
+    disabled: false
+
+  - name: planned_obsolescence
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.planned-obsolescence.org/feed"}
+    disabled: false
+
+  - name: peter_wildeford
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://peterwildeford.substack.com/feed"}
+    disabled: false
+    # ⚠️ Items resolve to blog.peterwildeford.com, NOT the substack domain.
+
+  - name: miles_brundage
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://milesbrundage.substack.com/feed"}
+    disabled: false
+
+  - name: jan_leike
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://aligned.substack.com/feed"}
+    disabled: false
+    # ⚠️ Latest 2026-01-22 — infrequent.
+
+  - name: victoria_krakovna
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://vkrakovna.wordpress.com/feed/"}
+    disabled: false
+
+  - name: neel_nanda
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.neelnanda.io/blog?format=rss"}
+    disabled: false
+    # ⚠️ Latest 2025-08-19 — a year stale. Verify before enabling.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # PODCASTS — surfaced on their own dashboard page (streams: podcasts).
+  # Feed URLs resolved via the iTunes lookup API on 2026-08-29, not guessed;
+  # every one validated through feedparser with a non-zero episode count.
+  # ⚠️ Items are episode DESCRIPTIONS / show notes, never transcripts. Good
+  # enough to triage, but there is no searchable body text — and *AI_SAFETY
+  # warns explicitly that auto-transcripts are not quotable.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: redwood_podcast
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://feeds.type3.audio/redwood-research.rss"}
+    disabled: true
+    # DISABLED 2026-08-29 — redundant, not broken. It is the audio edition of
+    # the Redwood blog and its episodes link to the SAME
+    # blog.redwoodresearch.org posts already ingested via `redwood_research`.
+    # The run logged "skipped 2 article(s) already seen from an earlier source
+    # this run (shared feed)" and stored nothing. Enable only if you want the
+    # audio rather than the post.
+
+  - name: dwarkesh
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://api.substack.com/feed/podcast/69345.rss"}
+    disabled: false
+
+  - name: cognitive_revolution
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://feeds.megaphone.fm/RINTP3108857801"}
+    disabled: false
+
+  - name: mlst
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://anchor.fm/s/1e4a0eac/podcast/rss"}
+    disabled: false
+    # Machine Learning Street Talk. Items resolve to podcasters.spotify.com.
+
+  - name: robert_miles
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.youtube.com/feeds/videos.xml?channel_id=UCLB7AzTwc6VFZrBsO2ucBMg"}
+    disabled: false
+    # ⭐ *AI_SAFETY named Robert Miles as a follow but did not have his channel
+    # ID. Found and verified. ⚠️ Required removing youtube.com from
+    # relevance.blocked_domains — see the note there.
+
+  - name: chinatalk
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.chinatalk.media/feed"}
+    disabled: false
+    # The dedicated China/compute source the geopolitics lane lacked.
+    # ⚠️ NOT the Apple/Megaphone audio feed (feeds.megaphone.fm/CHTAL4990341033):
+    # that carries no <link>, so the enclosure fallback resolved every episode
+    # to a raw traffic.megaphone.fm .mp3 — unreadable, and all 10 were dropped
+    # by the domain gate. The Substack feed gives real chinatalk.media pages
+    # AND the written newsletter, which is the more useful half.
+
+  - name: lawfare
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://feeds.acast.com/public/shows/60518a52f69aa815d2dba41c"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # ⚠️ 3,068 episodes and mostly NOT about AI — national security law in
+    # general. The relevance filter is doing all the work here.
+
+  - name: hard_fork
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://feeds.simplecast.com/l2i9YnTd"}
+    disabled: false
+    # NYT. ⚠️ Items resolve to nytimes.com — hard paywall on the write-ups.
+
+  - name: latent_space
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://api.substack.com/feed/podcast/1084089.rss"}
+    disabled: false
+
+  - name: practical_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://changelog.com/practicalai/feed"}
+    disabled: false
+
+  - name: gradient_dissent
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://feeds.captivate.fm/gradient-dissent/"}
+    disabled: false
+    # Weights & Biases. Items resolve to wandb.ai.
+
+  - name: mystery_ai_hype
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.buzzsprout.com/2126417.rss"}
+    disabled: false
+    # Bender & Hanna. ⚠️ NO <link> on items — depends on the enclosure
+    # fallback in rss_adapter._entry_url(). Resolves to buzzsprout.com.
+
+  - name: tech_wont_save_us
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.buzzsprout.com/1004689.rss"}
+    disabled: false
+    # ⚠️ No <link>; enclosure is wrapped in a Podscribe (pscrb.fm) tracking
+    # prefix that _strip_tracking_prefix() unwraps to buzzsprout.com.
+
+  - name: last_week_in_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://rss.art19.com/last-week-in-ai"}
+    disabled: false
+    # ⚠️ No <link>; enclosure wrapped in a Megalodon (mgln.ai) prefix that
+    # unwraps to rss.art19.com.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # MAINSTREAM TECH AND NEWS — added 2026-08-29.
+  # The weekly needs the FIELD, broadly: politics, geopolitics, safety,
+  # security, technical research, public sector deployment, institutions.
+  # The measurement angle is supplied at writing time, not filtered for here,
+  # so these are wide by design.
+  #
+  # Feeds already scoped to AI carry no relevance filter. General technology
+  # and science feeds carry one, and their domains are in broad_domains.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: techcrunch_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://techcrunch.com/category/artificial-intelligence/feed/"}
+    disabled: false
+
+  - name: verge_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"}
+    disabled: false
+
+  - name: arstechnica_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://arstechnica.com/ai/feed/"}
+    disabled: false
+
+  - name: wired_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.wired.com/feed/tag/ai/latest/rss"}
+    disabled: false
+
+  - name: theregister_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.theregister.com/software/ai_ml/headlines.atom"}
+    disabled: false
+
+  - name: zdnet_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://www.zdnet.com/topic/artificial-intelligence/rss.xml"}
+    disabled: false
+
+  - name: venturebeat_ai
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://venturebeat.com/category/ai/feed/"}
+    disabled: false
+
+  - name: ai_business
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://aibusiness.com/rss.xml"}
+    disabled: false
+    # Enterprise AI adoption trade press.
+
+  - name: bbc_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://feeds.bbci.co.uk/news/technology/rss.xml"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: nyt_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+      apply_relevance_filter: true
+    disabled: false
+    # ⚠️ Hard paywall — headline and standfirst only.
+
+  - name: ft_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.ft.com/technology?format=rss"
+      apply_relevance_filter: true
+    disabled: false
+    # ⚠️ Hard paywall. ft.com is ALSO in paywall_domains, which is checked
+    # before the approved-domain gate — so these will be rejected with a
+    # paywall reason unless ft.com is removed from that list. Left in place
+    # deliberately: the headline still tells you the story broke.
+
+  - name: politico_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://rss.politico.com/technology.xml"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: nature_news
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.nature.com/nature.rss"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # All of Nature. The filter and body match do the work.
+
+  - name: science_news
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.science.org/rss/news_current.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: four_zero_four_media
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.404media.co/rss/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Investigative tech reporting. CADENCE critical lane.
+
+  - name: the_markup
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://themarkup.org/feeds/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # ⚠️ Latest item 2026-07-28 — a month stale. Check it is still publishing.
+
+  - name: rest_of_world
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://restofworld.org/feed/latest"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # The only source covering AI outside the US/Europe systematically.
+
+  # ── Public sector deployment ─────────────────────────────────────────
+  - name: statescoop
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://statescoop.com/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # US state and local government technology — where public sector AI is
+    # actually procured and deployed.
+
+  - name: public_technology
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.publictechnology.net/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # UK public sector technology and digital government.
+
+  # ─────────────────────────────────────────────────────────────────────
+  # IRELAND — added 2026-08-29. Ireland was the thinnest lane (2 articles)
+  # despite being a centre of gravity: it hosts the EU establishments of most
+  # large platforms, so its regulators and press carry stories nowhere else
+  # does. All general-news feeds, so all filtered AND body-matched: Irish
+  # coverage of AI often runs under a business or policy headline.
+  #
+  # ⚠️ NOT ADDED: the Business Post (businesspost.ie). Its homepage advertises
+  # /feed/ but that URL serves HTML, not RSS — the feed is disabled. Worth
+  # re-checking; it is the obvious Irish business title for this beat.
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: business_post
+    type: web
+    scraper: src.scraping.news_sitemap_adapter
+    params:
+      feed_url: "https://www.businesspost.ie/news-sitemap.xml"
+      apply_relevance_filter: true
+    disabled: false
+    # Ireland's business paper. NO RSS: /feed/ and every other feed path return
+    # the site's HTML shell, and /wp-json returns an empty array. Its Google
+    # News sitemap carries 106 recent articles with title and date, so it is
+    # ingested via news_sitemap_adapter instead.
+    #
+    # ⚠️ TITLE-ONLY filtering regardless of match_body: run.py filters BEFORE
+    # backfilling bodies, and a sitemap supplies no body text, so there is
+    # nothing for a body match to read at filter time. A Business Post AI story
+    # headlined purely in business terms will be missed.
+    # ⚠️ Subscription site — expect truncated bodies after backfill.
+
+  - name: silicon_republic
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.siliconrepublic.com/feed"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Ireland's main technology publication — the closest thing to a dedicated
+    # Irish AI-industry source.
+
+  - name: irish_tech_news
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://irishtechnews.ie/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # ⚠️ 100 items and heavy on promotional/press-release content. Watch the
+    # signal-to-noise before trusting it.
+
+  - name: rte_news_tech
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.rte.ie/feeds/rss/?index=/news/technology"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # RTÉ news technology desk — distinct from rte_brainstorm, which is the
+    # academic explainer strand.
+
+  - name: thejournal_ie
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.thejournal.ie/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # ⚠️ TRACE recorded thejournal.ie as a silent-failure source: a login wall
+    # appears after rate-limiting, so it stayed in the pipeline contributing
+    # zero without anything alerting. The feed itself reads fine; watch whether
+    # BODY extraction starts coming back empty.
+
+  - name: irish_independent
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.independent.ie/rss/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: irish_examiner
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.irishexaminer.com/feed/35-top_news.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Feed path discovered from the homepage link tag, not a conventional path.
+
+  - name: dublin_inquirer
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.dublininquirer.com/latest/rss/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Local investigative journalism — Dublin City Council technology and
+    # surveillance procurement.
+
+  - name: the_currency
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://thecurrency.news/feed"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Irish business and finance. ⚠️ Subscription — expect truncated bodies.
+
+# ─────────────────────────────────────────────────────────────────────────
+# KNOWN GAPS — wanted, no working feed found on 2026-08-29
+#
+# ada_lovelace  — ⚠️ Top-ranked by BOTH reports. https://www.adalovelaceinstitute.org/feed/
+#                 returns 200, correct content-type, valid RSS — and ZERO items
+#                 (1168 bytes of channel header). Listed as "confirmed working"
+#                 upstream because that test checked status + XML but not items.
+#                 Chase by hand; this is the biggest single gap in the roster.
+# From *AI_SAFETY, tested and NOT resolving (its [CONVENTION] guesses):
+#   ailabwatch.org, aisi.gov.uk/blog, apartresearch.com, apolloresearch.ai/blog,
+#   civai.org, darioamodei.com, epoch.ai/gradient-updates, hai.stanford.edu,
+#   iaps.ai, internationalaisafetyreport.org, joecarlsmith.com, rand.org,
+#   safe.ai, theaidigest.org, transformer-circuits.pub (403)
+#   → METR and GovAI DID resolve and are listed above. Anthropic Alignment
+#     Science, Epoch and Apollo remain feedless: type: web candidates.
+# Excluded as dormant (validated, but stale): ai-alignment.com (2023-04),
+#   cold-takes.com (2024-01, source repo calls it "largely dormant"),
+#   defacc.substack.com (2024-07, 3 entries).
+#
+# aisi.gov.uk   — ⚠️ AISI's own domain (from AI-Governance-Analysis-UK-ROI) has NO
+#                 feed: /feed, /rss.xml and /news/rss.xml all 404. The gov.uk org
+#                 feed above is the only machine-readable route and it is stale.
+#                 Strong candidate for a type: web scraper.
+# No feed at any tried path: oecd.ai [corpus wt 21], oireachtas.ie [21],
+#   gov.scot [29], audit.scot [9], ico.org.uk [6], dataprotection.ie [5],
+#   edps.europa.eu (403), enisa, techuk, policyreview.info, cyber.harvard.edu,
+#   abebabirhane.com, holyrood.com, euractiv.com (403), iiea, ceps (500),
+#   scottishai.com, adaptcentre.ie (feed exists, zero entries)
+#   → TRACE verified NON-RSS routes for three of the highest-weight ones:
+#       gov.scot        → gov.scot/sitemap.xml  (sitemap, live)
+#       oireachtas.ie   → api.oireachtas.ie/v1/  (API)
+#       UK Parliament   → questions-statements-api.parliament.uk, committees-api…
+#     These need a type: web / custom adapter, not rss_adapter.
+#
+# turing        — 403 to both feedparser and a browser UA. Genuinely blocked.
+# tony_blair_institute — institute.global/feed returns 429 (rate-limited), which
+#                 implies the path exists. Retry later, slowly.
+# lero          — https://lero.ie/feed does not resolve. Try a DCU-hosted path.
+# our_ai_collective — ouraicollective.org fails DNS. Distinctive Scottish civil
+#                 society voice; get the real domain from the participant record.
+# scottish_ai_alliance — ⚠️ wound down March 2026. Do not chase.
+# No feed advertised on the homepage and none found by convention:
+#   epoch.ai, apolloresearch.ai, dataprotection.ie (Irish DPC), gov.scot,
+#   ico.org.uk, nesta.org.uk, oecd.ai, anthropic.com/news
+#   → these are the candidates for Google Alerts (type: google_alert) or a
+#     custom type: web scraper. Anthropic needs a scraper; it has no feed.
+#
+# DELIBERATELY EXCLUDED
+# Education-sector feeds (DfE, Ofsted, Ofqual, Education Scotland, SQA, EEF) and
+# Code Acts in Education. Both reports rank them Tier 2 at best, and CADENCE
+# flags that roughly half its list is education while your job notes say that
+# work is finished. Cheap to add back — one entry plus one approved domain.
+# Also excluded: vendors as sources (named in the research as objects of study,
+# not publishers), and the paywalled MLex and The Information.
+# ─────────────────────────────────────────────────────────────────────────

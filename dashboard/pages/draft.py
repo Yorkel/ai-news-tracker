@@ -24,6 +24,7 @@ from dashboard.data import (
     is_authenticated, load_decisions, record_decision, record_summary,
 )
 from src.inference.summarise import summarise_article
+from dashboard.palette import DUSK, DUSK_DEEP, DUSK_MUTED, DUSK_TEXT
 
 
 def _category_of(art: dict) -> str | None:
@@ -181,11 +182,34 @@ def _build_excel(grouped: dict, today: datetime) -> bytes:
 def render(df):
     st.title("Step 3: Draft Newsletter")
 
+    # ── Output 1: the reading-list CSV ──────────────────────────────────────
+    # Deliberately ABOVE the early return below. The CSV needs articles KEPT,
+    # while the newsletter needs them CATEGORISED — two independent outputs, so
+    # a week that was triaged but not categorised must still yield its CSV.
+    from dashboard import export as X
+    from dashboard.data import load_decisions as _load_dec
+
+    _kept = X.kept_frame(df, _load_dec())
+    st.download_button(
+        f"⬇ Reading list as CSV — {len(_kept)} kept, all streams",
+        X.to_csv_bytes(_kept),
+        file_name=X.filename(),
+        mime="text/csv",
+        use_container_width=True,
+        disabled=_kept.empty,
+        help="Everything you kept this week, across every stream, one row each.",
+    )
+    st.caption(
+        "The CSV is everything you **kept**. The newsletter below needs them "
+        "**categorised** as well."
+    )
+    st.markdown("---")
+
     accepted = get_accepted_articles(df)
     if not accepted:
         st.info(
-            "No categorised articles yet. Use **Triage** → **Select Categories** "
-            "first, then come back."
+            "No categorised articles yet — keep articles on a stream page, then "
+            "use **Categorise**, then come back to draft the post."
         )
         return
 
@@ -203,11 +227,11 @@ def render(df):
     # Newsletter header
     st.markdown(
         f"""
-        <div style="background:#0f1e3d;color:white;padding:20px;border-radius:8px;
+        <div style="background:{DUSK_DEEP};color:white;padding:20px;border-radius:8px;
                     text-align:center;margin-bottom:20px;">
             <div style="font-size:18px;font-weight:700;">News Tracker</div>
-            <div style="font-size:14px;color:#8fa8c8;margin-top:4px;">Newsletter</div>
-            <div style="font-size:14px;color:#8fa8c8;">{newsletter_date}</div>
+            <div style="font-size:14px;color:{DUSK_MUTED};margin-top:4px;">Newsletter</div>
+            <div style="font-size:14px;color:{DUSK_MUTED};">{newsletter_date}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -223,9 +247,9 @@ def render(df):
             continue
         cat_label = CATEGORY_LABELS[cat_key]
         st.markdown(
-            f"<div style='background:#1d3461;padding:10px 16px;border-radius:4px;"
+            f"<div style='background:{DUSK};padding:10px 16px;border-radius:4px;"
             f"margin:18px 0 8px 0;'>"
-            f"<span style='color:#c8d8ec;font-size:15px;font-weight:600;'>{_html(cat_label)}</span></div>",
+            f"<span style='color:{DUSK_TEXT};font-size:15px;font-weight:600;'>{_html(cat_label)}</span></div>",
             unsafe_allow_html=True,
         )
 
@@ -356,7 +380,7 @@ def render(df):
                              "change to a curator's initials if you prefer.",
                     )
 
-    # ── Download Excel ──────────────────────────────────────────────────────
+    # ── Download newsletter as Excel ────────────────────────────────────────
     st.markdown("---")
     excel_bytes = _build_excel(grouped, today)
     st.download_button(

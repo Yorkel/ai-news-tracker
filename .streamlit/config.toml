@@ -2,6 +2,10 @@
 showSidebarNavigation = false
 
 [theme]
-# Generate Summary (and other primary actions) render in orange — matches
-# the editorial pattern where "create" actions stand out from accept/reject.
-primaryColor = "#f39c12"
+# Sunset palette — see dashboard/palette.py, the single source of truth.
+# These four are Streamlit's own chrome (widgets, inputs, base background);
+# everything else is styled by dashboard/styles.py from the same values.
+primaryColor = "#F2683C"            # ACCENT       sunset orange
+backgroundColor = "#FFF8F2"         # SURFACE      warm cream
+secondaryBackgroundColor = "#FDEFE4"  # SURFACE_ALT  peach
+textColor = "#3B2154"               # INK          deep dusk purple

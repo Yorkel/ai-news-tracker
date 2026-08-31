@@ -2,7 +2,13 @@
 Custom CSS for dashboard styling.
 """
 
-from .config import NAVY, TEAL, MID_BLUE
+from .palette import (
+    ACCENT, ACCENT_HOVER, ACCENT_SOFT, DUSK, DUSK_MUTED, DUSK_TEXT,
+    GOLD, GOLD_SOFT, INFO, INFO_SOFT, INK, INK_SOFT, KEEP_SOFT,
+    REJECT, REJECT_HOVER, REJECT_SOFT, RULE, SURFACE_ALT, SURFACE_SUNK,
+)
+
+NAVY, TEAL, MID_BLUE = DUSK, ACCENT, INK_SOFT
 
 
 def get_css():
@@ -24,14 +30,14 @@ def get_css():
     /* Sidebar buttons need their own text colour so they're not white-on-pale */
     [data-testid="stSidebar"] [data-testid="stButton"] button[kind="secondary"],
     [data-testid="stSidebar"] [data-testid="stButton"] button[kind="secondary"] * {{
-        color: #c0392b !important;
+        color: {REJECT} !important;
     }}
     [data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"],
     [data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] * {{
         color: white !important;
     }}
     [data-testid="stSidebar"] .stRadio label {{
-        color: #c8d8ec !important;
+        color: {DUSK_MUTED} !important;
     }}
     [data-testid="stSidebar"] .stRadio label:hover {{
         color: {TEAL} !important;
@@ -51,13 +57,13 @@ def get_css():
         border-color: {TEAL};
     }}
     .stButton > button[kind="primary"]:hover {{
-        background-color: #389e93;
-        border-color: #389e93;
+        background-color: {ACCENT_HOVER};
+        border-color: {ACCENT_HOVER};
     }}
 
     /* Info boxes */
     .stAlert {{
-        background-color: #e8f4f8;
+        background-color: {INFO_SOFT};
         border-left-color: {TEAL};
     }}
 
@@ -68,7 +74,7 @@ def get_css():
 
     /* Dividers */
     hr {{
-        border-color: #dde3ed;
+        border-color: {RULE};
     }}
 
     /* Hide anchor link icons on headers */
@@ -78,18 +84,18 @@ def get_css():
 
     /* Card containers - light background */
     [data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: #f8f9fb !important;
+        background-color: {SURFACE_ALT} !important;
         border-radius: 8px !important;
     }}
 
     /* Download button - light orange */
     [data-testid="stDownloadButton"] button {{
-        background-color: #ffecd2 !important;
-        color: #856404 !important;
-        border: 1px solid #f0c36d !important;
+        background-color: {GOLD_SOFT} !important;
+        color: {INK} !important;
+        border: 1px solid {GOLD} !important;
     }}
     [data-testid="stDownloadButton"] button:hover {{
-        background-color: #ffe0b2 !important;
+        background-color: {SURFACE_SUNK} !important;
     }}
 
     /* All buttons - same height, larger text */
@@ -100,32 +106,32 @@ def get_css():
 
     /* Primary buttons - light blue (Category 1 + Manual) */
     [data-testid="stButton"] button[kind="primary"] {{
-        background-color: #d6e4f0 !important;
-        border: 1px solid #4472c4 !important;
-        color: #2c5aa0 !important;
+        background-color: {INFO_SOFT} !important;
+        border: 1px solid {INFO} !important;
+        color: {INFO} !important;
     }}
     [data-testid="stButton"] button[kind="primary"]:hover {{
-        background-color: #b8cfe2 !important;
+        background-color: {SURFACE_SUNK} !important;
     }}
 
     /* Tertiary buttons - light orange (Category 2) */
     [data-testid="stButton"] button[kind="tertiary"] {{
-        background-color: #fde8d0 !important;
-        border: 1px solid #ed7d31 !important;
-        color: #c46516 !important;
+        background-color: {ACCENT_SOFT} !important;
+        border: 1px solid {ACCENT} !important;
+        color: {ACCENT_HOVER} !important;
     }}
     [data-testid="stButton"] button[kind="tertiary"]:hover {{
-        background-color: #f9d4ae !important;
+        background-color: {SURFACE_SUNK} !important;
     }}
 
     /* Secondary buttons - light red (Reject) */
     [data-testid="stButton"] button[kind="secondary"] {{
-        background-color: #fadbd8 !important;
-        border: 1px solid #e74c3c !important;
-        color: #c0392b !important;
+        background-color: {REJECT_SOFT} !important;
+        border: 1px solid {REJECT} !important;
+        color: {REJECT} !important;
     }}
     [data-testid="stButton"] button[kind="secondary"]:hover {{
-        background-color: #f1948a !important;
+        background-color: {REJECT_HOVER} !important;
         color: white !important;
     }}
 </style>

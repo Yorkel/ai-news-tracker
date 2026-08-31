@@ -69,11 +69,31 @@ def protect_existing_summaries(records: list[dict], existing: dict[str, str]) ->
 
 
 def get_client() -> "Client":
+    """Return a database client.
+
+    Two backends, chosen by environment:
+
+      DATABASE_URL set  -> Postgres via src.scraping.pg_client.PgClient, which
+                           implements the same fluent API. Used for local
+                           development and any plain-Postgres host.
+      otherwise         -> Supabase, as before.
+
+    Every caller uses the PostgREST-style API either way, so nothing else in
+    the codebase needs to know which backend is live.
+    """
+    dsn = os.environ.get("DATABASE_URL")
+    if dsn:
+        from src.scraping.pg_client import PgClient
+        return PgClient(dsn)
+
     from supabase import create_client  # lazy: keep module importable without the SDK
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
-        raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in .env")
+        raise RuntimeError(
+            "No database configured. Set DATABASE_URL for Postgres, or "
+            "SUPABASE_URL and SUPABASE_SERVICE_KEY for Supabase, in .env"
+        )
     return create_client(url, key)
 
 

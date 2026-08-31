@@ -270,3 +270,6 @@ L6_MLengineer_*.docx
 # macOS / Office junk
 .DS_Store
 ~$*
+
+# local embedded Postgres data dir (pgserver)
+.pgdata/

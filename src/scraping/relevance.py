@@ -209,7 +209,15 @@ def compile_keyword_patterns(keywords: tuple[str, ...] | list[str]) -> list[re.P
         kw_l = kw.lower().strip()
         if not kw_l:
             continue
-        if " " in kw_l or "-" in kw_l:
+        # \b anchors on a word-character transition, so it cannot match a
+        # keyword that starts or ends with punctuation: "\ba\.i\.\b" never
+        # matches "A.I. spending", because the boundary after the final "."
+        # falls between two non-word characters. Keywords containing a space,
+        # hyphen or full stop therefore use lookarounds instead.
+        # This matters in practice: the New York Times writes "A.I.", and
+        # title-only filtering silently dropped every one of its AI stories
+        # until "a.i." was added as a keyword (verified 2026-08-29).
+        if " " in kw_l or "-" in kw_l or "." in kw_l:
             patterns.append(re.compile(rf"(?<!\w){re.escape(kw_l)}(?!\w)"))
         else:
             patterns.append(re.compile(rf"\b{re.escape(kw_l)}\b"))

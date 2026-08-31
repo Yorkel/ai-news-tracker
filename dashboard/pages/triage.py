@@ -19,11 +19,15 @@ import streamlit as st
 import pandas as pd
 
 from dashboard.config import source_label
+from dashboard import streams as S
+from dashboard import thoughts as TH
 from dashboard.data import (
+    clear_stream_override, record_stream_override,
     delete_decision, fetch_article_text, is_authenticated, load_decisions,
     record_decision, record_summary, record_topic_sentence,
 )
 from src.inference.summarise import extract_topic_sentence, summarise_article
+from dashboard.palette import (style, ACCENT, ACCENT_SOFT, FAINT, INFO, INFO_SOFT, INK, KEEP, KEEP_HOVER, KEEP_SOFT, MUTED, PENDING, REJECT, RULE, SURFACE_ALT)
 
 
 def _clean(v):
@@ -53,8 +57,12 @@ def _safe_href(v) -> str:
 
 
 def _tuesday_on_or_before(d: date) -> date:
-    """Most recent Tuesday on or before `d` - anchors a scrape week."""
-    return d - timedelta(days=(d.weekday() - 1) % 7)
+    """Most recent anchor weekday on or before `d` - the start of its week.
+
+    Name kept for its call sites; the anchor itself is config-driven
+    (`week.anchor_day` in config/domain.yml), currently Friday."""
+    from src.scraping.common import week_anchor
+    return d - timedelta(days=(d.weekday() - week_anchor()) % 7)
 
 
 def _ordinal(n: int) -> str:
@@ -67,35 +75,37 @@ def _ordinal(n: int) -> str:
 
 
 def _format_week_label(wk_start: date, wk_end: date) -> str:
-    """e.g. 'Tuesday 19th May - Monday 25th May 2026' (year only on the end
-    date to keep the label readable). If the week spans years, show both."""
-    start = f"Tuesday {_ordinal(wk_start.day)} {wk_start:%B}"
+    """e.g. 'Friday 22nd August - Thursday 28th August 2026' (year only on the
+    end date to keep the label readable). If the week spans years, show both.
+    Weekday names are derived, not hardcoded, so they follow week.anchor_day."""
+    start = f"{wk_start:%A} {_ordinal(wk_start.day)} {wk_start:%B}"
     if wk_start.year != wk_end.year:
         start = f"{start} {wk_start.year}"
-    end = f"Monday {_ordinal(wk_end.day)} {wk_end:%B} {wk_end.year}"
+    end = f"{wk_end:%A} {_ordinal(wk_end.day)} {wk_end:%B} {wk_end.year}"
     return f"{start} - {end}"
 
 
 def _week_options(df: pd.DataFrame) -> list[tuple[str, date, date]]:
-    """Build every completed Tue→Mon week back to the earliest article we have.
-    A week is 'completed' only once its Monday end has passed (so the
-    in-progress week isn't shown until the following Tuesday).
-    Newest first."""
+    """Build every completed week back to the earliest article we have.
+
+    A week runs from the anchor weekday (week.anchor_day in config/domain.yml,
+    currently Friday) to the day before the next anchor, and counts as
+    'completed' only once that end has passed — so the in-progress week is not
+    offered until it finishes. Newest first."""
     if "_article_date" not in df.columns:
         return []
     dates = df["_article_date"].dropna()
     if dates.empty:
         return []
     earliest = _tuesday_on_or_before(dates.min())
-    # Latest completed week ends on the most recent Monday < today.
     today = date.today()
-    days_since_mon = (today.weekday() - 0) % 7  # Mon=0
-    last_completed_end = today - timedelta(days=days_since_mon + 1) if days_since_mon == 0 else today - timedelta(days=days_since_mon)
-    # If today is Mon, the week ending yesterday hasn't quite finished - so
-    # only show weeks ending strictly before today.
-    if last_completed_end >= today:
-        last_completed_end = today - timedelta(days=1)
-    anchor = _tuesday_on_or_before(last_completed_end)
+    # The in-progress week starts at the anchor on or before today; the last
+    # COMPLETED week is therefore the one starting a further 7 days back.
+    # Derived from the anchor rather than a hardcoded weekday — this used to
+    # compute the end as "the most recent Monday", which silently disagreed
+    # with the Friday start once the anchor moved and hid most articles.
+    current_start = _tuesday_on_or_before(today)
+    anchor = current_start - timedelta(days=7)
     out: list[tuple[str, date, date]] = []
     cur = anchor
     while cur >= earliest:
@@ -121,15 +131,15 @@ def _status_for(url: str, decisions: dict) -> str:
 
 
 _STATUS_COLOUR = {
-    "Pending": "#888",
-    "Kept": "#1e8449",
-    "Rejected": "#c0392b",
-    "Categorised": "#2980b9",
+    "Pending": PENDING,
+    "Kept": KEEP,
+    "Rejected": REJECT,
+    "Categorised": INFO,
 }
 
-_TAG_STYLE = (
-    "background:#eef;color:#333;padding:1px 6px;border-radius:8px;"
-    "font-size:10px;border:1px solid #ccd;margin-right:3px;"
+_TAG_STYLE = style(
+    "background:{SURFACE_ALT};color:{INK};padding:1px 6px;border-radius:8px;"
+    "font-size:10px;border:1px solid {RULE};margin-right:3px;"
 )
 
 
@@ -149,8 +159,8 @@ def _badges_html(geo: str | None, topics: list[str] | None) -> str:
     if not parts:
         return ""
     return (
-        "<p style='margin:2px 0;font-size:11px;color:#555;'>"
-        "<b>Key tags:</b> " + "".join(parts) + "</p>"
+        style("<p style='margin:2px 0;font-size:11px;color:{MUTED};'>")
+        + "<b>Key tags:</b> " + "".join(parts) + "</p>"
     )
 
 
@@ -160,7 +170,7 @@ def render(df):
     # Targeted button colours: the Keep button uses a marker div + sibling-selector
     # so it can be green (positive action) without recolouring every secondary button.
     # Reject stays neutral grey (Streamlit's default secondary).
-    st.markdown("""
+    st.markdown(style("""
     <style>
     /* Keep button = green. The .keep-btn-marker div is placed immediately
        before the st.button("Keep") call; the adjacent-sibling selector then
@@ -170,16 +180,16 @@ def render(df):
         display: none;
     }
     .element-container:has(.keep-btn-marker) + div [data-testid="stButton"] button {
-        background-color: #2ecc71 !important;
-        border-color: #27ae60 !important;
+        background-color: {KEEP} !important;
+        border-color: {KEEP} !important;
         color: white !important;
     }
     .element-container:has(.keep-btn-marker) + div [data-testid="stButton"] button:hover {
-        background-color: #27ae60 !important;
-        border-color: #229954 !important;
+        background-color: {KEEP_HOVER} !important;
+        border-color: {KEEP_HOVER} !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -289,7 +299,7 @@ def _render_triage_card(row: dict):
     status = _status_for(url, decisions)
 
     st.markdown(
-        "<div style='border-top:3px solid #1d3461;margin:20px 0;'></div>",
+        style("<div style='border-top:3px solid {ACCENT};margin:20px 0;'></div>"),
         unsafe_allow_html=True,
     )
     st.markdown(f"### {_html(title)}")
@@ -297,7 +307,7 @@ def _render_triage_card(row: dict):
     with st.container(border=True):
         # Status badge sits inline with title area on the right; URL + tags
         # take up the rest. Tags go ABOVE source (matches Select Categories).
-        colour = _STATUS_COLOUR.get(status, "#888")
+        colour = _STATUS_COLOUR.get(status, PENDING)
 
         # Key tags row - directly under title, before source/date
         badges = _badges_html(row.get("geographic_focus"), row.get("topic_tags"))
@@ -312,7 +322,7 @@ def _render_triage_card(row: dict):
             f"border-radius:8px;font-size:11px;font-weight:600;'>{status}</span>"
         )
         st.markdown(
-            f"<p style='color:#666;font-size:14px;margin:2px 0;'>"
+            f"<p style='color:{MUTED};font-size:14px;margin:2px 0;'>"
             f"{status_badge} &nbsp; <b>Source:</b> {_html(source_name)} "
             f"&nbsp;&nbsp; <b>Date:</b> {_html(article_date)}</p>",
             unsafe_allow_html=True,
@@ -336,15 +346,15 @@ def _render_triage_card(row: dict):
         with st.expander("📌 Topic sentence", expanded=False):
             if topic_sentence:
                 st.markdown(
-                    f"<div style='background:#eef6ee;border-left:3px solid #2ecc71;"
+                    f"<div style='background:{KEEP_SOFT};border-left:3px solid {KEEP};"
                     f"padding:8px 12px;'>{_html(topic_sentence)}</div>",
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
-                    "<div style='background:#f5f5f5;border-left:3px solid #aaa;"
-                    "padding:8px 12px;color:#666;font-style:italic;'>"
-                    "No topic sentence yet</div>",
+                    style("<div style='background:{SURFACE_ALT};border-left:3px solid {FAINT};"
+                          "padding:8px 12px;color:{MUTED};font-style:italic;'>")
+                    + "No topic sentence yet</div>",
                     unsafe_allow_html=True,
                 )
             if auth:
@@ -370,15 +380,15 @@ def _render_triage_card(row: dict):
         with st.expander("📝 Summary", expanded=not summary):
             if summary:
                 st.markdown(
-                    f"<div style='background:#eef;border-left:3px solid #5b8def;"
+                    f"<div style='background:{INFO_SOFT};border-left:3px solid {INFO};"
                     f"padding:8px 12px;'>{_html(summary)}</div>",
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
-                    "<div style='background:#fff4f4;border-left:3px solid #e0a;"
-                    "padding:8px 12px;color:#666;font-style:italic;'>"
-                    "No summary yet, generate one below.</div>",
+                    style("<div style='background:{ACCENT_SOFT};border-left:3px solid {ACCENT};"
+                          "padding:8px 12px;color:{MUTED};font-style:italic;'>")
+                    + "No summary yet, generate one below.</div>",
                     unsafe_allow_html=True,
                 )
             # Always render the button (greyed when not signed in) so it stays
@@ -433,3 +443,80 @@ def _render_triage_card(row: dict):
             ):
                 delete_decision(url)
                 st.rerun(scope="fragment")
+
+        # ── Note on this article ────────────────────────────────────────────
+        # The scratchpad, attached to the item it is about. Saving from here
+        # records the article's title and URL as the citation, and files the
+        # note under today's date — so "what did I think about this, and when"
+        # is answered without typing a reference by hand.
+        _notes = TH.for_article(url)
+        with st.expander(f"💭 Note{f' ({len(_notes)})' if _notes else ''}", expanded=False):
+            for _day, _idx, _t in _notes:
+                c_txt, c_del = st.columns([9, 1])
+                with c_txt:
+                    st.markdown(
+                        style("<div style='background:{SURFACE_ALT};border-left:3px solid {ACCENT};"
+                              "padding:6px 10px;margin:3px 0;border-radius:0 4px 4px 0;'>"
+                              "<span style='color:{MUTED};font-size:11px;'>")
+                        + f"{_day} {_t.get('time','')}</span>"
+                        + style("<div style='color:{INK};font-size:13px;white-space:pre-wrap;'>")
+                        + _html(_t.get("text", "")) + "</div></div>",
+                        unsafe_allow_html=True,
+                    )
+                with c_del:
+                    if st.button("✕", key=f"delnote_{url}_{_day}_{_idx}",
+                                 help="Delete this note"):
+                        TH.delete(_day, _idx)
+                        st.rerun()
+            with st.form(f"noteform_{url}", clear_on_submit=True):
+                _nt = st.text_area(
+                    "Note", height=90, label_visibility="collapsed",
+                    placeholder="Your thought about this article…",
+                )
+                _ns = st.form_submit_button("Save note", type="primary",
+                                            use_container_width=True)
+            if _ns:
+                if not _nt.strip():
+                    st.error("Nothing to save.")
+                elif TH.add(_nt, stream=row.get("stream", "") or "",
+                            article_title=row.get("title", "") or "",
+                            article_url=url):
+                    st.rerun()
+                else:
+                    st.error("Could not write data/thoughts.json.")
+
+        # ── Move to another stream ──────────────────────────────────────────
+        # Streams are derived from the source, which is coarse: one source sits
+        # in one lane but its articles do not. This moves a single article and
+        # persists the choice (curator_decisions.stream_override), so it holds
+        # across reruns and re-scrapes.
+        current = row.get("stream") or row.get("stream_derived") or ""
+        derived = row.get("stream_derived") or ""
+        others = [s for s in S.ORDER if s != current]
+        with st.expander("↔ Move to another stream", expanded=False):
+            if current != derived and derived:
+                st.caption(
+                    f"Moved here by you — it would otherwise sit in "
+                    f"**{S.SHORT.get(derived, derived)}** (from its source)."
+                )
+            else:
+                st.caption(f"In **{S.SHORT.get(current, current)}**, from its source.")
+            cols = st.columns(len(others))
+            for col, target in zip(cols, others):
+                with col:
+                    if st.button(
+                        S.SHORT.get(target, target),
+                        key=f"mv_{target}_{url}",
+                        use_container_width=True,
+                        disabled=not auth,
+                        help=f"Move this article to {S.DISPLAY.get(target, target)}",
+                    ):
+                        record_stream_override(url, target)
+                        st.rerun()
+            if current != derived and derived:
+                if st.button(
+                    "↩ Reset to source stream", key=f"mvreset_{url}",
+                    use_container_width=True, disabled=not auth,
+                ):
+                    clear_stream_override(url)
+                    st.rerun()

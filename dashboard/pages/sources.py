@@ -37,10 +37,33 @@ def _domain(u: str) -> str:
 def render(df):
     st.title("Sources")
 
+    # ── Suggested sources awaiting review ───────────────────────────────────
+    # Read from config/pending_sources.yml (the record that lives in git), not
+    # the database, so what is shown here is exactly what a reviewer will see
+    # in a diff.
+    from dashboard.data import load_source_suggestions
+
+    pending = load_source_suggestions()
+    if pending:
+        with st.expander(f"Suggested sources awaiting review ({len(pending)})", expanded=False):
+            st.caption(
+                "Added via ➕ Add source. These are NOT scraped. To promote one: find and "
+                "test its feed, add it to src/scraping/sources.yml, add its article domain "
+                "to relevance.approved_domains, then assign it a stream."
+            )
+            st.dataframe(
+                pd.DataFrame(pending)[
+                    [c for c in ["name", "stream", "url", "coverage_hint", "notes", "suggested_at"]
+                     if c in pd.DataFrame(pending).columns]
+                ],
+                use_container_width=True, hide_index=True,
+            )
+
     # Scrape weeks run Tue→Mon (matches Triage). "Last week" = the most recently
     # completed one (today's week is still in progress).
     today = date.today()
-    this_tue = today - timedelta(days=(today.weekday() - 1) % 7)
+    from src.scraping.common import week_anchor
+    this_tue = today - timedelta(days=(today.weekday() - week_anchor()) % 7)
     wk_start = pd.Timestamp(this_tue - timedelta(days=7))
     wk_end_incl = this_tue - timedelta(days=1)
     wk_end = pd.Timestamp(wk_end_incl) + pd.Timedelta(days=1)

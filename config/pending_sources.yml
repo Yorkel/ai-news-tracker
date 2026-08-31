@@ -1,0 +1,20 @@
+# pending_sources.yml — the holding file for suggested sources.
+#
+# Written by the "Suggest a source" form in the dashboard. Nothing reads this
+# file at scrape time: it is a staging area, deliberately separate from
+# src/scraping/sources.yml so a suggestion can never start scraping by accident.
+#
+# To promote an entry:
+#   1. Find its feed URL and test it:
+#        python -m src.scraping.try_source --url <article url>
+#   2. Add a proper entry to src/scraping/sources.yml (disabled: true).
+#   3. Add the article domain to relevance.approved_domains in config/domain.yml
+#      — run.py fails closed, so without this it scrapes and drops everything.
+#   4. Add the source name to the right stream in `streams:` in config/domain.yml.
+#   5. Enable it, then delete the entry from here.
+#
+# Each suggestion is also appended to the source_suggestions table, so this file
+# and the database hold the same record. The file is the one you can read in a
+# diff.
+
+pending: []

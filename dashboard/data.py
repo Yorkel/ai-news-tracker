@@ -18,7 +18,14 @@ from datetime import date, datetime, timedelta, timezone
 
 import streamlit as st
 import pandas as pd
-from supabase import create_client
+
+# Streamlit does not read .env, so nothing here saw DATABASE_URL / SUPABASE_*
+# unless they were exported into the shell first. Load it explicitly.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:  # dotenv is optional; env vars may be set another way
+    pass
 
 
 # ── Null-safe text cleaning ──────────────────────────────────────────────────
@@ -45,12 +52,25 @@ def clean_text(v):
 
 @st.cache_resource
 def get_client():
-    """Single cached Supabase client per Streamlit process."""
+    """Single cached database client per Streamlit process.
+
+    Mirrors src.scraping.supabase_client.get_client(): DATABASE_URL selects the
+    Postgres backend, otherwise Supabase. Both expose the same fluent API, so
+    every read and write below is unchanged either way. The Supabase SDK is
+    imported lazily so the dashboard runs without it installed.
+    """
+    dsn = os.environ.get("DATABASE_URL")
+    if dsn:
+        from src.scraping.pg_client import PgClient
+        return PgClient(dsn)
+
+    from supabase import create_client
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
         raise RuntimeError(
-            "SUPABASE_URL and SUPABASE_ANON_KEY (or SERVICE_KEY) must be set"
+            "No database configured. Set DATABASE_URL for Postgres, or "
+            "SUPABASE_URL and SUPABASE_ANON_KEY (or SERVICE_KEY) for Supabase"
         )
     return create_client(url, key)
 
@@ -90,11 +110,12 @@ def load_classified_articles(min_week: int | None = None) -> pd.DataFrame:
     return df
 
 
-def _last_tuesday(today: date | None = None) -> date:
+def _last_tuesday(today: date | None = None) -> date:  # noqa: N802 (kept: call sites)
     """Most recent Tuesday strictly before today — the start of the current
     Tue→Tue newsletter week. Matches src/monitoring/pipeline_health.py."""
     today = today or datetime.now(timezone.utc).date()
-    offset = (today.weekday() - 1) % 7   # Mon=0..Sun=6; Tuesday=1
+    from src.scraping.common import week_anchor
+    offset = (today.weekday() - week_anchor()) % 7
     if offset == 0:
         offset = 7
     return today - timedelta(days=offset)
@@ -317,6 +338,61 @@ def record_decision(url: str, action: str, label: str) -> None:
     load_decisions.clear()
 
 
+def record_stream_override(url: str, stream: str) -> None:
+    """Move one article into a different dashboard stream.
+
+    Streams are normally derived from the source (see dashboard/streams.py), so
+    this records the curator disagreeing about a single article. Written to
+    curator_decisions, which is keyed on url and NOT NULL on `action`: an
+    article moved before it has been kept or rejected gets the same
+    'summary_only' placeholder record_summary() uses, and a later keep/reject
+    overwrites the action while leaving the override in place.
+    """
+    if not url or not stream:
+        return
+    client = get_client()
+    existing = client.table("curator_decisions").select("action").eq("url", url).limit(1).execute()
+    if existing.data:
+        client.table("curator_decisions").update(
+            {"stream_override": stream}
+        ).eq("url", url).execute()
+    else:
+        client.table("curator_decisions").insert({
+            "url": url, "action": "summary_only", "label": "",
+            "stream_override": stream,
+        }).execute()
+    load_stream_overrides.clear()
+    load_decisions.clear()
+
+
+def clear_stream_override(url: str) -> None:
+    """Return an article to its derived stream."""
+    if not url:
+        return
+    get_client().table("curator_decisions").update(
+        {"stream_override": None}
+    ).eq("url", url).execute()
+    load_stream_overrides.clear()
+    load_decisions.clear()
+
+
+@st.cache_data(ttl=60)
+def load_stream_overrides() -> dict[str, str]:
+    """{url: stream} for every article the curator has moved."""
+    try:
+        rows = (
+            get_client().table("curator_decisions")
+            .select("url, stream_override").execute().data or []
+        )
+    except Exception:
+        return {}
+    return {
+        r["url"]: r["stream_override"]
+        for r in rows
+        if r.get("url") and r.get("stream_override")
+    }
+
+
 def fetch_article_text(url: str) -> str:
     """Pull full article body text from `articles.text` for one URL.
 
@@ -426,6 +502,104 @@ def record_feedback(suggestions: str) -> None:
     client.table("curator_feedback").insert({
         "suggestions": suggestions.strip(),
     }).execute()
+
+
+PENDING_SOURCES_FILE = (
+    __import__("pathlib").Path(__file__).resolve().parents[1] / "config" / "pending_sources.yml"
+)
+
+
+def record_source_suggestion(
+    source_name: str,
+    url: str = "",
+    stream: str = "",
+    coverage_hint: str = "",
+    notes: str = "",
+) -> dict:
+    """Log a curator's suggested source to BOTH the holding file and the table.
+
+    The holding file (config/pending_sources.yml) is the primary record: it
+    lives in the repo, shows up in a diff, and survives the database being
+    unavailable. The source_suggestions table is written too so the dashboard
+    can list pending items without reading the filesystem.
+
+    Deliberately does NOT touch src/scraping/sources.yml. A suggestion must be
+    promoted by hand — finding and testing the feed, and adding the domain to
+    approved_domains — because run.py fails closed and a half-added source
+    scrapes and silently drops everything.
+
+    Returns {"file": bool, "db": bool} so the caller can tell the curator what
+    actually persisted rather than claiming success for both.
+    """
+    import pathlib
+
+    import yaml
+
+    name = (source_name or "").strip()
+    if not name:
+        return {"file": False, "db": False}
+
+    entry = {
+        "name": name,
+        "url": (url or "").strip(),
+        "stream": (stream or "").strip(),
+        "coverage_hint": (coverage_hint or "").strip(),
+        "notes": (notes or "").strip(),
+        "suggested_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "status": "pending",
+    }
+
+    wrote_file = False
+    try:
+        path = pathlib.Path(PENDING_SOURCES_FILE)
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else None
+        header = ""
+        if path.exists():
+            raw = path.read_text(encoding="utf-8")
+            header = raw.split("pending:")[0]
+        items = list((doc or {}).get("pending") or [])
+        items.append(entry)
+        path.write_text(
+            header + "pending:\n" + yaml.safe_dump(items, sort_keys=False, allow_unicode=True,
+                                                   default_flow_style=False, indent=2),
+            encoding="utf-8",
+        )
+        wrote_file = True
+    except Exception:
+        # A filesystem failure must not lose the suggestion — the DB write below
+        # is still attempted, and the return value reports what happened.
+        wrote_file = False
+
+    wrote_db = False
+    try:
+        get_client().table("source_suggestions").insert({
+            "source_name": entry["name"],
+            "url": entry["url"] or None,
+            "stream": entry["stream"] or None,
+            "coverage_hint": entry["coverage_hint"] or None,
+            "notes": entry["notes"] or None,
+        }).execute()
+        wrote_db = True
+    except Exception:
+        wrote_db = False
+
+    return {"file": wrote_file, "db": wrote_db}
+
+
+def load_source_suggestions() -> list[dict]:
+    """Pending suggestions from the holding file (the record that lives in git)."""
+    import pathlib
+
+    import yaml
+
+    try:
+        path = pathlib.Path(PENDING_SOURCES_FILE)
+        if not path.exists():
+            return []
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return list(doc.get("pending") or [])
+    except Exception:
+        return []
 
 
 def record_summary(url: str, summary: str) -> None:

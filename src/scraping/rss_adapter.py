@@ -69,6 +69,71 @@ def _domain_as_source(url: str) -> str | None:
 _ORDINAL_RE = re.compile(r"(\d+)(st|nd|rd|th)\b", re.I)
 
 
+# Podcast analytics services wrap the real episode URL in a redirect prefix.
+# Stripping them yields the canonical page and stops the same episode being
+# stored twice if a show changes analytics provider.
+_TRACKING_PREFIXES = (
+    "pscrb.fm/rss/p/",          # Podscribe
+    "mgln.ai/e/",               # Megalodon  (has a numeric segment after /e/)
+    "chtbl.com/track/",         # Chartable
+    "pdst.fm/e/",               # Podsights
+    "dts.podtrac.com/redirect.mp3/",
+    "claritaspod.com/measure/",
+    "verifi.podscribe.com/rss/p/",
+    "prfx.byspotify.com/e/",
+)
+
+
+def _strip_tracking_prefix(url: str) -> str:
+    """Unwrap a podcast analytics redirect to the URL it points at."""
+    if not url:
+        return url
+    working = url
+    for _ in range(4):  # prefixes are sometimes chained
+        low = working.lower()
+        for pref in _TRACKING_PREFIXES:
+            i = low.find(pref)
+            if i == -1:
+                continue
+            rest = working[i + len(pref):]
+            # Megalodon inserts a numeric id segment: /e/211/<real url>
+            if pref == "mgln.ai/e/" and "/" in rest:
+                head, _, tail = rest.partition("/")
+                if head.isdigit():
+                    rest = tail
+            if not rest:
+                continue
+            if not rest.startswith(("http://", "https://")):
+                rest = "https://" + rest.lstrip("/")
+            working = rest
+            break
+        else:
+            break
+    return working
+
+
+def _entry_url(e) -> str:
+    """Best available page URL for a feed entry.
+
+    Most feeds set <link>. Podcast feeds from Buzzsprout, Art19 and similar
+    often do NOT — they carry only an <enclosure> pointing at the audio, and a
+    guid that is an internal id rather than a URL. Without this fallback those
+    entries were dropped silently at the top of scrape(), which looks
+    identical to an empty feed.
+    """
+    link = (e.get("link") or "").strip()
+    if link:
+        return link
+    for enc in (e.get("enclosures") or []):
+        href = (enc.get("href") or "").strip()
+        if href:
+            return _strip_tracking_prefix(href)
+    guid = (e.get("id") or "").strip()
+    if guid.startswith(("http://", "https://")):
+        return guid
+    return ""
+
+
 def _entry_date(entry) -> date | None:
     # First try feedparser's pre-parsed dates (works for standard RSS/Atom)
     for key in ("published_parsed", "updated_parsed", "created_parsed"):
@@ -124,7 +189,7 @@ def scrape(*, source: str, feed_url: str,
     seen_urls: set[str] = set()
 
     for e in parsed.entries:
-        url = e.get("link") or ""
+        url = _entry_url(e)
         if is_google_alert:
             url = _unwrap_google_url(url)
         else:

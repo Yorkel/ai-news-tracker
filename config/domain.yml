@@ -34,13 +34,391 @@ labels:
     safety: Safety
     tooling: Tooling
     other: Other
+  # Sunset palette — kept in step with dashboard/palette.py.
   colors:
-    governance: "#3B6EA8"
-    research: "#4F8A5B"
-    industry: "#C9793A"
-    safety: "#B0504F"
-    tooling: "#2E8C9E"
-    other: "#667085"
+    governance: "#7B4FA8"   # dusk violet
+    research: "#4A63A8"     # twilight blue
+    industry: "#F2683C"     # sunset orange
+    safety: "#C2325C"       # sunset crimson
+    tooling: "#E9A13B"      # gold
+    other: "#9A8296"        # mauve grey
+
+# ─────────────────────────────────────────────────────────────────────────
+# STREAMS — the four lanes the dashboard splits articles into.
+#
+# There is no classifier yet (Stage 1), so a stream is decided by WHICH SOURCE
+# published the article. That is deterministic, needs no model, and re-buckets
+# the whole corpus the instant this file changes — nothing is stored on the
+# article row, so there is no migration and no re-ingest.
+#
+# `geopolitics` is the exception: world/security news cuts across every source
+# rather than belonging to particular ones, so any article whose TITLE matches
+# `geopolitics.keywords` is routed there regardless of its source. Source
+# assignment is the default; the keyword rule overrides it.
+# ─────────────────────────────────────────────────────────────────────────
+streams:
+  order: [governance, geopolitics, safety, research, technical, deployment, podcasts]
+
+  governance:
+    display: "AI governance, policy and news"
+    short: "Governance & policy"
+    description: "Regulators, legislation, civil society and the impact of AI on policy."
+    sources:
+      - govuk_ai_search
+      - dsit
+      - cabinet_office
+      - ec_digital_strategy
+      - edpb
+      - coimisiun_na_mean
+      - iccl
+      - ronan_kennedy
+      - govai
+      - tech_policy_press
+      - institute_for_government
+      - ai4people
+      - public_law_project
+      - big_brother_watch
+      - connected_by_data
+      - we_and_ai
+      - mozilla
+      - conversation_uk_tech
+      - lighthouse_reports
+      - normal_tech
+      - transformer
+      - commons_library
+      - nao
+      - fra_eu
+      - edri
+      - access_now
+      - algorithmwatch
+      - open_rights_group
+      - the_ferret
+      - eu_ai_act_tracker
+      - ai_now_institute
+      - blood_in_the_machine
+      - peter_wildeford
+      - miles_brundage
+      - mit_tech_review_ai
+      - rte_brainstorm
+      - bbc_tech
+      - nyt_tech
+      - ft_tech
+      - four_zero_four_media
+      - the_markup
+      - thejournal_ie
+      - irish_independent
+      - irish_examiner
+      - dublin_inquirer
+      - the_currency
+      - rte_news_tech
+      - business_post
+
+  geopolitics:
+    display: "Geopolitical and world news"
+    short: "Geopolitics"
+    description: "International relations, export controls, compute supply chains and security."
+    sources:
+      - guardian_ai
+      - europarl_press
+      - bruegel
+      - cset
+      - council_strategic_risks
+      - platformer
+      - politico_tech
+      - rest_of_world
+    # Cross-cutting: a title match here overrides the source assignment above.
+    # Kept deliberately narrow — broad terms would drain the other streams.
+    keywords:
+      - china
+      - chinese
+      - beijing
+      - taiwan
+      - russia
+      - ukraine
+      - export control
+      - export controls
+      - sanctions
+      - semiconductor
+      - semiconductors
+      - chip war
+      - tsmc
+      - nvidia
+      - geopolitic
+      - geopolitical
+      - national security
+      - sovereignty
+      - sovereign
+      - treaty
+      - military
+      - defence
+      - defense
+      - warfare
+      - trade war
+      - tariff
+      - tariffs
+      - united nations
+      - g7
+      - nato
+      - global south
+
+  safety:
+    display: "AI safety and security"
+    short: "Safety & security"
+    description: "Alignment, evaluations, control, frontier risk and model security."
+    sources:
+      - ai_security_institute
+      - metr
+      - nist
+      - cais_safety_newsletter
+      - lesswrong
+      - redwood_research
+      - alignment_forum
+      - bluedot_impact
+      - ai_futures_project
+      - forethought
+      - ai_frontiers
+      - frontier_model_forum
+      - miri
+      - deepmind_safety_research
+      - forecasting_research_institute
+      - inspect_ai_releases
+      - planned_obsolescence
+      - jan_leike
+      - victoria_krakovna
+      - dont_worry_about_the_vase
+
+  technical:
+    display: "ML technical skills"
+    short: "ML technical"
+    description: "Models, tooling, engineering practice and research you can learn from."
+    sources:
+      - import_ai
+      - interconnects
+      - simon_willison
+      - openai
+      - deepmind
+      - huggingface
+      - sebastian_raschka
+      - techcrunch_ai
+      - verge_ai
+      - arstechnica_ai
+      - wired_ai
+      - theregister_ai
+      - silicon_republic
+      - irish_tech_news
+
+  research:
+    display: "AI and research"
+    short: "AI & research"
+    description: "Preprints, papers and research-lab output — the primary literature, before it becomes news."
+    # Split out of `technical` on 2026-08-31. `technical` keeps the
+    # practitioner and industry half (tooling, releases, trade press); this is
+    # the academic and research-output half. arXiv cs.CY moved here from
+    # `safety` too — it is a preprint category, not a safety organisation.
+    sources:
+      - arxiv_cs_ai
+      - arxiv_cs_lg
+      - arxiv_cs_cy
+      - nature_news
+      - science_news
+      - lilian_weng
+      - neel_nanda
+
+  deployment:
+    display: "Deployment and public sector"
+    short: "Deployment"
+    description: "AI actually in use — public sector procurement and rollout, enterprise adoption, and what happens after go-live."
+    sources:
+      - statescoop
+      - public_technology
+      - gds_blog
+      - ai_business
+      - venturebeat_ai
+      - zdnet_ai
+
+  podcasts:
+    display: "Podcasts"
+    short: "Podcasts"
+    description: "Audio across every topic. Episode notes only — these feeds carry no transcript."
+    # Format, not topic: a podcast leaves its topical stream and lives here,
+    # because listening is a different activity from reading and gets triaged
+    # differently. Geography is handled as a FILTER inside each stream instead,
+    # since a place and a topic are not mutually exclusive.
+    sources:
+      - eighty_thousand_hours
+      - axrp
+      - redwood_podcast
+      - dwarkesh
+      - cognitive_revolution
+      - mlst
+      - robert_miles
+      - chinatalk
+      - lawfare
+      - hard_fork
+      - latent_space
+      - practical_ai
+      - gradient_dissent
+      - mystery_ai_hype
+      - tech_wont_save_us
+      - last_week_in_ai
+
+# ─────────────────────────────────────────────────────────────────────────
+# GEOGRAPHY — a FILTER inside every stream, not a stream of its own.
+#
+# Place and topic are different axes: a DSIT story is UK *and* governance,
+# so making UK a stream would force it out of one or the other. As a filter
+# it composes — "UK stories in Governance", "Irish geopolitics".
+#
+# Derived from the SOURCE, like streams. articles.country is not usable for
+# this: geography.default_country is 'uk', so every row is labelled uk
+# regardless of where the publisher is.
+# ─────────────────────────────────────────────────────────────────────────
+places:
+  order: [UK, Ireland, EU, US, Global]
+  UK:
+    - bbc_tech
+    - ft_tech
+    - theregister_ai
+    - public_technology
+    - ai4people
+    - ai_security_institute
+    - big_brother_watch
+    - bluedot_impact
+    - cabinet_office
+    - commons_library
+    - connected_by_data
+    - conversation_uk_tech
+    - dsit
+    - eighty_thousand_hours
+    - forethought
+    - gds_blog
+    - govai
+    - govuk_ai_search
+    - guardian_ai
+    - inspect_ai_releases
+    - institute_for_government
+    - nao
+    - neel_nanda
+    - open_rights_group
+    - public_law_project
+    - robert_miles
+    - simon_willison
+    - the_ferret
+    - we_and_ai
+  Ireland:
+    - business_post
+    - silicon_republic
+    - irish_tech_news
+    - rte_news_tech
+    - thejournal_ie
+    - irish_independent
+    - irish_examiner
+    - dublin_inquirer
+    - the_currency
+    - coimisiun_na_mean
+    - iccl
+    - ronan_kennedy
+    - rte_brainstorm
+  EU:
+    - algorithmwatch
+    - bruegel
+    - ec_digital_strategy
+    - edpb
+    - edri
+    - eu_ai_act_tracker
+    - europarl_press
+    - fra_eu
+    - lighthouse_reports
+    - mozilla
+  US:
+    - techcrunch_ai
+    - verge_ai
+    - arstechnica_ai
+    - wired_ai
+    - zdnet_ai
+    - venturebeat_ai
+    - ai_business
+    - nyt_tech
+    - politico_tech
+    - science_news
+    - four_zero_four_media
+    - the_markup
+    - statescoop
+    - access_now
+    - ai_futures_project
+    - ai_now_institute
+    - alignment_forum
+    - axrp
+    - blood_in_the_machine
+    - cais_safety_newsletter
+    - chinatalk
+    - cognitive_revolution
+    - council_strategic_risks
+    - cset
+    - deepmind
+    - deepmind_safety_research
+    - dwarkesh
+    - forecasting_research_institute
+    - frontier_model_forum
+    - gradient_dissent
+    - hard_fork
+    - jan_leike
+    - last_week_in_ai
+    - latent_space
+    - lawfare
+    - lesswrong
+    - metr
+    - miles_brundage
+    - miri
+    - mit_tech_review_ai
+    - mystery_ai_hype
+    - nist
+    - normal_tech
+    - openai
+    - peter_wildeford
+    - planned_obsolescence
+    - platformer
+    - practical_ai
+    - redwood_podcast
+    - redwood_research
+    - tech_policy_press
+    - victoria_krakovna
+  Global:
+    - nature_news
+    - rest_of_world
+    - ai_frontiers
+    - arxiv_cs_ai
+    - arxiv_cs_cy
+    - arxiv_cs_lg
+    - dont_worry_about_the_vase
+    - huggingface
+    - import_ai
+    - interconnects
+    - lilian_weng
+    - mlst
+    - sebastian_raschka
+    - tech_wont_save_us
+    - transformer
+
+# ─────────────────────────────────────────────────────────────────────────
+# WEEK ANCHOR
+#
+# The publishing week runs from this weekday to the day before it, and every
+# part of the pipeline reads it from here: the scrape's --weekly-backfill
+# windows, articles.week_number, the dashboard's week selector, the weekly
+# reset and the pipeline health check.
+#
+# Changed from tuesday to friday on 2026-08-29: this tracker feeds a Friday
+# Substack post, so the week the curator triages must END on Thursday, not
+# on Monday. Left on tuesday it inherited the education newsletter's cycle
+# and the freshest three days sat in an "in progress" week the selector
+# would not show.
+#
+# ⚠️ Changing this shifts week_number for articles ALREADY stored. Existing
+# rows keep the number they were given at scrape time; only new rows use the
+# new anchor. Do not change it again once issues have been published.
+week:
+  anchor_day: friday
 
 summaries:
   publication_name: AI news tracker digest
@@ -54,6 +432,12 @@ relevance:
   keywords:
     - ai
     - artificial intelligence
+    # House styles that punctuate the abbreviation. The New York Times and
+    # several others write "A.I."; without these every one of their AI stories
+    # failed the title filter. Needs the lookaround branch in
+    # compile_keyword_patterns() to match — see the note there.
+    - a.i.
+    - a.i
     - machine learning
     - deep learning
     - neural network
@@ -84,14 +468,237 @@ relevance:
     - anthropic
     - deepmind
     - hugging face
+    # Added 2026-08-29. *AI_SAFETY records two institutional renames — UK AI
+    # Safety Institute → AI Security Institute (Feb 2025) and US AISI → CAISI
+    # (Jun 2025) — and warns that "any keyword filter built on 'AI Safety
+    # Institute' silently loses both". Both spellings are listed.
+    - ai safety institute
+    - ai security institute
+    - caisi
+    - aisi
+    # Technical safety and evals vocabulary — the roster now carries alignment
+    # and evals sources whose articles the original keyword list would miss.
+    - alignment
+    - misalignment
+    - interpretability
+    - red team
+    - red-teaming
+    - system card
+    - model card
+    - ai control
+    - scheming
+    - sandbagging
+    - frontier ai
+    - agentic
+    - superintelligence
+    - existential risk
+    # Added after the 2026-08-29 dry run: the Guardian's AI section carried
+    # datacentre-energy stories that the title-only filter dropped. AI compute
+    # demand is in scope, so these spellings are needed.
+    - datacentre
+    - datacentres
+    - data centre
+    - data centres
+    - data center
+    - data centers
+    # compile_keyword_patterns() is word-boundary exact with NO plural
+    # handling, so \bdatacentre\b does not match "datacentres". Plurals of
+    # countable nouns must be listed explicitly. Verified 2026-08-29 against
+    # Guardian AI-section headlines. Not adding plurals for "ai" or "compute",
+    # where an optional -s would create false matches.
+    - chatbots
+    - algorithms
+    - benchmarks
+    - foundation models
+    - frontier models
+    - large language models
+    - llms
+    - model evaluations
+    - system cards
+    - model cards
 
   # Filled in during the sources step. While this is EMPTY, run.py drops every
   # single article — is_approved_domain() fails closed by design.
-  approved_domains: []
+  #
+  # Populated 2026-08-29 to match src/scraping/sources.yml. Every entry is the
+  # domain articles ACTUALLY resolve to, extracted from each feed's item links,
+  # not the feed's own host. Matching is EXACT netloc (www. stripped), so
+  # subdomains are listed separately — gds.blog.gov.uk does not inherit gov.uk.
+  approved_domains:
+    # UK government
+    - gov.uk
+    - gds.blog.gov.uk
+    - nist.gov
+    # EU and Ireland
+    - digital-strategy.ec.europa.eu
+    - edpb.europa.eu
+    - cnam.ie
+    - iccl.ie
+    - rkennedy.ie
+    - rte.ie
+    # Governance institutes and research orgs
+    - governance.ai
+    - techpolicy.press
+    - metr.org
+    - instituteforgovernment.org.uk
+    - ai4people.org
+    - adalovelaceinstitute.org   # feed currently returns zero items; see sources.yml
+    # Civil society
+    - publiclawproject.org.uk
+    - bigbrotherwatch.org.uk
+    - connectedbydata.org
+    - weandai.org
+    - blog.mozilla.org
+    # Media and analysis
+    - technologyreview.com
+    - theguardian.com
+    - theconversation.com
+    - lighthousereports.com
+    - platformer.news
+    # Independent analysts and newsletters
+    - normaltech.ai              # NOT aisnakeoil.com — renamed to Normal Tech
+    - importai.substack.com
+    - interconnects.ai
+    - transformernews.ai
+    - thezvi.substack.com
+    - newsletter.safe.ai
+    - bloodinthemachine.com
+    - simonwillison.net
+    - lesswrong.com
+    # Labs and ML research
+    - openai.com
+    - deepmind.google
+    - huggingface.co
+    - magazine.sebastianraschka.com
+    - lilianweng.github.io
+    - arxiv.org
+    # Added 2026-08-29 from AI-Governance-Analysis-UK-ROI and TRACE
+    - commonslibrary.parliament.uk
+    - nao.org.uk
+    - europarl.europa.eu
+    - fra.europa.eu
+    - edri.org
+    - accessnow.org
+    - algorithmwatch.org
+    - openrightsgroup.org
+    - bruegel.org
+    - theferret.scot
+    # Podcast episode-page domains (added 2026-08-29). Several podcast feeds
+    # carry no <link>, so these are the hosts their ENCLOSURE resolves to
+    # after tracking prefixes are stripped — see rss_adapter._entry_url().
+    - feeds.type3.audio
+    - dwarkesh.com
+    - cognitiverevolution.ai
+    - podcasters.spotify.com
+    - youtube.com
+    - chinatalk.media
+    - shows.acast.com
+    - nytimes.com
+    - latent.space
+    - share.transistor.fm
+    - wandb.ai
+    - buzzsprout.com
+    - rss.art19.com
+    # Mainstream tech / news / deployment (added 2026-08-29)
+    - techcrunch.com
+    - theverge.com
+    - arstechnica.com
+    - wired.com
+    - theregister.com
+    - zdnet.com
+    - venturebeat.com
+    - aibusiness.com
+    - bbc.co.uk
+    - nytimes.com
+    - ft.com
+    - politico.com
+    - nature.com
+    - science.org
+    - 404media.co
+    - themarkup.org
+    - restofworld.org
+    - statescoop.com
+    - publictechnology.net
+    - siliconrepublic.com
+    - irishtechnews.ie
+    - thejournal.ie
+    - independent.ie
+    - irishexaminer.com
+    - dublininquirer.com
+    - thecurrency.news
+    - businesspost.ie
+    # Ireland (added 2026-08-29)
+    - siliconrepublic.com
+    - irishtechnews.ie
+    - thejournal.ie
+    - independent.ie
+    - irishexaminer.com
+    - dublininquirer.com
+    - thecurrency.news
+    # Added 2026-08-29 from *AI_SAFETY (technical safety and evals)
+    - blog.redwoodresearch.org
+    - alignmentforum.org
+    - blog.bluedot.org
+    - blog.aifutures.org
+    - forethought.org
+    - newsletter.ai-frontiers.org
+    - cset.georgetown.edu
+    - ainowinstitute.org
+    - councilonstrategicrisks.org
+    - artificialintelligenceact.eu
+    - frontiermodelforum.org
+    - intelligence.org
+    - deepmindsafetyresearch.medium.com
+    - forecastingresearch.substack.com
+    - github.com
+    - 80000hours.org
+    - axrpodcast.libsyn.com
+    - planned-obsolescence.org
+    - blog.peterwildeford.com
+    - milesbrundage.substack.com
+    - aligned.substack.com
+    - vkrakovna.wordpress.com
+    - neelnanda.io
 
   # Subset of approved_domains that publish across many topics, so the keyword
   # filter must also pass (e.g. general news sites, university news pages).
-  broad_domains: []
+  broad_domains:
+    - gov.uk
+    - gds.blog.gov.uk
+    - nist.gov
+    - rte.ie
+    - theconversation.com
+    - theguardian.com
+    - blog.mozilla.org
+    - lesswrong.com
+    - huggingface.co
+    - edpb.europa.eu
+    - cnam.ie
+    - iccl.ie
+    - bigbrotherwatch.org.uk
+    - publiclawproject.org.uk
+    - instituteforgovernment.org.uk
+    - commonslibrary.parliament.uk
+    - nao.org.uk
+    - europarl.europa.eu
+    - fra.europa.eu
+    - edri.org
+    - accessnow.org
+    - openrightsgroup.org
+    - bruegel.org
+    - theferret.scot
+    - councilonstrategicrisks.org
+    - bbc.co.uk
+    - nytimes.com
+    - ft.com
+    - politico.com
+    - nature.com
+    - science.org
+    - 404media.co
+    - themarkup.org
+    - restofworld.org
+    - statescoop.com
+    - publictechnology.net
 
   blocked_domains:
     - instagram.com
@@ -99,7 +706,12 @@ relevance:
     - twitter.com
     - x.com
     - tiktok.com
-    - youtube.com
+    # youtube.com REMOVED from this list 2026-08-29: Robert Miles' channel is a
+    # deliberate source and YouTube's per-channel Atom feed is the only way to
+    # follow it. youtu.be stays blocked — it only ever appears as a share link
+    # inside other articles, never as a source in its own right.
+    # ⚠️ Trade-off: any YouTube URL surfaced by any other feed is now allowed
+    # through the domain gate. The keyword filter is the remaining defence.
     - youtu.be
     - linkedin.com
     - msn.com
@@ -116,15 +728,34 @@ relevance:
     - /travel/
     - /iplayer/
     - /programmes/
+    # Translated duplicates. METR publishes a Chinese edition of each post at
+    # /zh-Hans/<same-slug>, which arrives as a second article with an identical
+    # body in another language — URL dedup cannot catch it because the URLs
+    # genuinely differ. Only /zh-Hans/ has been observed (1 of 426 articles on
+    # 2026-08-29); the others are here so a new translated source does not
+    # silently double every item.
+    - /zh-Hans/
+    - /zh-Hant/
+    - /es/
+    - /fr/
+    - /de/
+    - /ja/
+    - /ko/
+    - /pt-BR/
 
   blocked_title_keywords: []
 
   paywall_domains:
+    # ft.com REMOVED 2026-08-29. is_paywall_domain() is checked BEFORE the
+    # approved-domain gate, so listing it dropped all 25 FT items with a
+    # paywall reason and the lane showed nothing. The brief is not to miss
+    # things: a paywalled headline still tells you the story broke, and
+    # nytimes.com — equally paywalled — was already being ingested, so the
+    # two were being treated inconsistently.
     - telegraph.co.uk
     - thetimes.com
     - thetimes.co.uk
     - thesundaytimes.co.uk
-    - ft.com
     - spectator.co.uk
     - thesun.co.uk
 

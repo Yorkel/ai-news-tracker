@@ -50,8 +50,9 @@ def last_tuesday(today: date | None = None) -> date:
     (`date -d 'last tuesday'`). On a Tuesday this returns the PREVIOUS Tuesday,
     so the open Tue→Tue cycle is fully covered on both the Mon and Tue runs."""
     today = today or datetime.now(timezone.utc).date()
-    offset = (today.weekday() - 1) % 7   # Mon=0..Sun=6; Tuesday=1
-    if offset == 0:                      # today IS Tuesday: go back a full week
+    from src.scraping.common import week_anchor
+    offset = (today.weekday() - week_anchor()) % 7
+    if offset == 0:                      # today IS the anchor: go back a full week
         offset = 7
     return today - timedelta(days=offset)
 

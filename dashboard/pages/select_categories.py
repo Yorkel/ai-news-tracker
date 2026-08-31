@@ -23,16 +23,17 @@ from dashboard.config import CATEGORY_ORDER, CATEGORY_SHORT_LABELS, source_label
 from dashboard.data import (
     clean_text, get_kept_articles, is_authenticated, record_decision,
 )
+from dashboard.palette import (style, ACCENT, FAINT, GOLD, GOLD_SOFT, INFO, INK, KEEP, MUTED, RULE, SURFACE_ALT)
 
 
 _STATUS_COLOUR = {
-    "Awaiting category": "#d35400",
-    "Categorised": "#1e8449",
+    "Awaiting category": ACCENT,
+    "Categorised": KEEP,
 }
 
 _TAG_STYLE = (
-    "background:#eef;color:#333;padding:2px 8px;border-radius:10px;"
-    "font-size:10px;border:1px solid #ccd;margin-right:3px;"
+    style("background:{SURFACE_ALT};color:{INK};padding:2px 8px;border-radius:10px;"
+          "font-size:10px;border:1px solid {RULE};margin-right:3px;")
 )
 
 
@@ -50,8 +51,8 @@ def _badges_html(geo, topics) -> str:
     if not parts:
         return ""
     return (
-        "<p style='margin:2px 0;font-size:11px;color:#555;'>"
-        "<b>Key tags:</b> " + "".join(parts) + "</p>"
+        style("<p style='margin:2px 0;font-size:11px;color:{MUTED};'>")
+        + "<b>Key tags:</b> " + "".join(parts) + "</p>"
     )
 
 
@@ -128,7 +129,7 @@ def _render_article(art: dict, idx_in_cluster: int):
 
         # Source, Date
         st.markdown(
-            f"<p style='color:#666;font-size:13px;margin:2px 0;'>"
+            f"<p style='color:{MUTED};font-size:13px;margin:2px 0;'>"
             f"<b>Source:</b> {_html(source)} &nbsp;&nbsp; <b>Date:</b> {_html(article_date)}</p>",
             unsafe_allow_html=True,
         )
@@ -150,15 +151,15 @@ def _render_article(art: dict, idx_in_cluster: int):
         with st.expander("📋 Show summary", expanded=False):
             if summary_text:
                 st.markdown(
-                    f"<div style='background:#f8f4ea;border-left:3px solid #f39c12;"
+                    f"<div style='background:{GOLD_SOFT};border-left:3px solid {GOLD};"
                     f"padding:8px 12px;font-size:12px;'>{_html(summary_text)}</div>",
                     unsafe_allow_html=True,
                 )
             else:
                 st.markdown(
-                    "<div style='background:#f5f5f5;border-left:3px solid #aaa;"
-                    "padding:8px 12px;color:#666;font-style:italic;font-size:12px;'>"
-                    "Summary unavailable</div>",
+                    style("<div style='background:{SURFACE_ALT};border-left:3px solid {FAINT};"
+                          "padding:8px 12px;color:{MUTED};font-style:italic;font-size:12px;'>")
+                    + "Summary unavailable</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -276,22 +277,22 @@ def render(df):
     # Targeted button colours via marker-divs + sibling-selector CSS.
     # Top 1 = green (model's best guess), Top 2 = blue (alternative).
     # Same trick as the Keep button on Triage.
-    st.markdown("""
+    st.markdown(style("""
     <style>
     .element-container:has(.cat-top1-marker) { display: none; }
     .element-container:has(.cat-top1-marker) + div [data-testid="stButton"] button {
-        background-color: #2ecc71 !important;
-        border-color: #27ae60 !important;
+        background-color: {KEEP} !important;
+        border-color: {KEEP} !important;
         color: white !important;
     }
     .element-container:has(.cat-top2-marker) { display: none; }
     .element-container:has(.cat-top2-marker) + div [data-testid="stButton"] button {
-        background-color: #3498db !important;
-        border-color: #2980b9 !important;
+        background-color: {INFO} !important;
+        border-color: {INFO} !important;
         color: white !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     kept = get_kept_articles(df)
     if not kept:
