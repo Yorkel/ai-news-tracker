@@ -28,6 +28,29 @@ except ImportError:  # dotenv is optional; env vars may be set another way
     pass
 
 
+def _secrets_into_environ() -> None:
+    """Copy st.secrets into os.environ.
+
+    Streamlit Cloud exposes secrets ONLY through st.secrets; it does not put
+    them in the environment. Everything else in this project reads os.environ
+    (get_client, the Anthropic/OpenAI SDKs, src.scraping.*), so without this
+    bridge a correctly-configured Cloud deploy still fails with "No database
+    configured" — which is exactly what happened on the first deploy.
+
+    Existing environment variables win, so a local .env keeps overriding.
+    """
+    try:
+        for k, v in st.secrets.items():
+            if isinstance(v, (str, int, float, bool)) and k not in os.environ:
+                os.environ[str(k)] = str(v)
+    except Exception:
+        # No secrets.toml locally is normal and not an error.
+        pass
+
+
+_secrets_into_environ()
+
+
 # ── Null-safe text cleaning ──────────────────────────────────────────────────
 def clean_text(v):
     """Coerce a possibly-null value to a clean display string.

@@ -21,6 +21,7 @@ from dashboard.data import (
 )
 from dashboard.pages import triage, select_categories, draft, sources, thoughts_page
 from dashboard.palette import DUSK_DEEP, MUTED, style
+from dashboard.gate import require_password
 from dashboard import streams as S
 from dashboard import thoughts as TH
 from dashboard.data import record_source_suggestion, load_stream_overrides, load_decisions
@@ -78,15 +79,12 @@ def main():
         "Sources": "Manage sources",
     })
 
-    # The curator password was removed on 2026-08-31: this runs locally, for a
-    # single user, and the login gate only ever disabled all 562 action buttons.
-    # `authenticated` is kept as the flag the 17 `disabled=not auth` call sites
-    # read, so re-introducing a gate later means setting this conditionally
-    # again rather than touching every button.
-    # ⚠️ If this is ever deployed somewhere reachable by other people, restore
-    # the gate — with it always True, anyone who opens the page can triage,
-    # reject and edit.
-    st.session_state.authenticated = True
+    # Full-page gate. Restored 2026-08-31 when the app went onto a public
+    # Streamlit Cloud URL: without it, anyone with the link could read the
+    # articles and notes AND use every action button. require_password() calls
+    # st.stop() until the password is entered, so nothing below runs and the
+    # database is never queried.
+    require_password()
 
     if "current_page" not in st.session_state:
         st.session_state.current_page = f"stream:{S.ORDER[0]}"

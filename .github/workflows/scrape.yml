@@ -1,6 +1,17 @@
 name: Scrape sources to articles
 
+# Runs daily so that Friday's triage is never a cold start, and the weekly
+# post is drawn from a full week already in the database.
+#
+# 06:00 UTC daily. The publishing week is Friday to Thursday
+# (week.anchor_day in config/domain.yml), so Friday morning's run closes the
+# week you are about to write up.
+#
+# --since-last-run reads started_at from the most recent successful scrape_runs
+# row, so a missed day is picked up automatically rather than leaving a hole.
 on:
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -18,18 +29,18 @@ jobs:
 
       - name: Verify required secrets are set
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           missing=""
-          for name in SUPABASE_URL SUPABASE_SERVICE_KEY OPENAI_API_KEY; do
+          for name in DATABASE_URL OPENAI_API_KEY; do
             if [ -z "${!name}" ]; then
               missing="$missing $name"
             fi
           done
           if [ -n "$missing" ]; then
             echo "ERROR: required secret(s) unset/empty:$missing" >&2
+            echo "Set them at Settings > Secrets and variables > Actions." >&2
             exit 1
           fi
 
@@ -46,11 +57,15 @@ jobs:
 
       - name: Run scraper
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # DATABASE_URL selects the Postgres backend (Neon). If it is unset,
+          # get_client() falls back to Supabase — see src/scraping/pg_client.py.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
-          PROXY_TOKEN: ${{ secrets.PROXY_TOKEN }}
           ENRICH_PROVIDER: openai
+          OPENAI_SUMMARY_MODEL: gpt-4.1-mini
         run: python -m src.scraping.run --since-last-run
+
+      - name: Summarise the run
+        if: always()
+        run: echo "Scrape finished with status ${{ job.status }}"
