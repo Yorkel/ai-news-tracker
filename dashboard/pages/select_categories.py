@@ -23,7 +23,7 @@ from dashboard.config import CATEGORY_ORDER, CATEGORY_SHORT_LABELS, source_label
 from dashboard.data import (
     clean_text, get_kept_articles, is_authenticated, record_decision,
 )
-from dashboard.palette import (style, ACCENT, FAINT, GOLD, GOLD_SOFT, INFO, INK, KEEP, MUTED, RULE, SURFACE_ALT)
+from dashboard.palette import (style, ACCENT, GOLD, GOLD_SOFT, KEEP, MUTED)
 
 
 _STATUS_COLOUR = {

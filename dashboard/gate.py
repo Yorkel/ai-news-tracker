@@ -27,7 +27,7 @@ import os
 
 import streamlit as st
 
-from dashboard.palette import ACCENT, INK, MUTED, RULE, SURFACE_ALT, style
+from dashboard.palette import style
 
 
 def _expected() -> str | None:

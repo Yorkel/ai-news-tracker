@@ -27,7 +27,7 @@ from dashboard.data import (
     record_decision, record_summary, record_topic_sentence,
 )
 from src.inference.summarise import extract_topic_sentence, summarise_article
-from dashboard.palette import (style, ACCENT, ACCENT_SOFT, FAINT, INFO, INFO_SOFT, INK, KEEP, KEEP_HOVER, KEEP_SOFT, MUTED, PENDING, REJECT, RULE, SURFACE_ALT)
+from dashboard.palette import (style, INFO, INFO_SOFT, KEEP, KEEP_SOFT, MUTED, PENDING, REJECT)
 
 
 def _clean(v):

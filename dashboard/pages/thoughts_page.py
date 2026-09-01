@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date
 
 import streamlit as st
 
 from dashboard import thoughts as T
-from dashboard.palette import ACCENT, INK, MUTED, RULE, SURFACE_ALT, style
+from dashboard.palette import style
 
 
 def render(df=None):

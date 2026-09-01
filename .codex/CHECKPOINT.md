@@ -1,29 +1,30 @@
 # Repository checkpoint
 
-Last updated: 2026-09-01T13:06:36+0100
+Last updated: 2026-09-01T13:11:25+0100
 Repository: `/Users/qtnzlyo/GitHub/ai-news-tracker`
 Status: active
 
 ## Repository state
 
 - Branch: `main`
-- Commit: `dde3603`
-- Working tree: clean before this untracked checkpoint was created; branch matched `origin/main`.
+- Commit: `78faab6`
+- Working tree: checkpoint modified after audit; local `main` is ahead 6 and behind 5 relative to `origin/main` because local and remote contain separate duplicate-looking commit chains.
 - Relevant session IDs: `01a05cd2-b581-77e2-83d1-5271861a91b6`
 
 ## Last completed
 
-- Completed a read-only portfolio audit of the current repository, public password gate, authenticated desktop dashboard, and mobile layout.
-- Provisional portfolio rating: 6.5/10. The underlying system is substantial, but the portfolio presentation, public demo path, documentation accuracy, first-screen hierarchy, and accessibility need work.
+- Corrected the portfolio audit scope to the GitHub repository itself: code organisation, documentation, reproducibility, tests, security, Git history, and public readiness.
+- Provisional repository portfolio rating: 6.5/10. The engineering is substantial, but stale template documentation, absent project-specific evaluation artefacts, failing lint, placeholder files, and repository-history hygiene materially weaken the presentation.
 
 ## Deliverables and changed files
 
-- `.codex/CHECKPOINT.md` — untracked private continuity checkpoint; the only repository file created during the audit.
+- `.codex/CHECKPOINT.md` — continuity checkpoint; it was committed locally in `78faab6` by another concurrent action and is not present on `origin/main`.
 - No website, application, configuration, data, deployment, commit, or remote changes were made.
 
 ## Decisions confirmed
 
 - 2026-09-01: user requested an audit, rating, and recommended changes; no implementation was requested or authorised.
+- 2026-09-01: user clarified that “portfolio piece” means assessment of the repository, not the deployed dashboard.
 
 ## Validation
 
@@ -33,21 +34,23 @@ Status: active
 - Verified current scope: 125 configured source entries, 124 enabled, 121 approved domains, 7 streams, and 6 category labels.
 - Verified a misleading pipeline metric: `dashboard/app.py` adds unclassified and blank-summary counts, double-counting articles missing both.
 - Verified README/config documentation is stale relative to the live implementation and scheduled workflows.
+- Verified `origin/main` contains five public commits, including the non-descriptive commit `d`; local `main` is on a separate duplicate-looking five-commit chain plus the checkpoint commit.
+- Verified project-specific model/data governance artefacts are absent: the repository ships generic templates and template-language guidance rather than completed model card, datasheet, evaluation report, or threat model.
 
 ## Currently active
 
-- Awaiting the user's decision on whether to implement the portfolio improvements.
+- Reporting the corrected repository-only portfolio assessment.
 
 ## Not done
 
-- No public read-only demo, case-study landing page, README rewrite, UI simplification, accessibility fix, lint cleanup, or metric correction has been implemented.
-- No public deployment URL was supplied or independently audited; the visual review used the current local app.
+- No README rewrite, history reconciliation, lint cleanup, template removal, reproducibility fixture, or project-specific evaluation documentation has been implemented.
 
 ## Blockers and unresolved questions
 
-- A portfolio-safe exposure model must be chosen before implementation: a sanitized read-only demo in this app, or a separate public case-study page with screenshots/video while retaining the private curator dashboard.
+- Local and remote histories must be reconciled before the local branch is pushed; no history-changing action is authorised.
+- The checkpoint should remain private and should not be pushed to the public portfolio repository.
 - Repo-local `PROJECT_CONTEXT.md` and `AGENTS.md` are absent; creating them requires user approval.
 
 ## Exact next action
 
-1. Ask the user to choose between a sanitized read-only demo and a separate public case-study landing page, then propose the exact files and behaviour before editing.
+1. If the user wants implementation, propose an exact repository-only cleanup beginning with `README.md`, Git-history reconciliation, lint fixes, and replacement of template documentation with project-specific evidence.
