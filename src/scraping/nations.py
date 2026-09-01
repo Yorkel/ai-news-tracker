@@ -1,8 +1,4 @@
-"""Source-to-geography mapping for tracker records.
-
-Defaults are UK education examples because the starter tests exercise that shape.
-Replace SOURCE_NATION or load it from config/domain.yml for a different tracker.
-"""
+"""Legacy source-to-country mapping retained for stored article records."""
 
 from __future__ import annotations
 

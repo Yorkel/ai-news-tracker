@@ -4,17 +4,15 @@ sweep_summaries.py — idempotent safety-net for article summaries + tags.
 Finds every article in `articles` that has a NULL `summary` (or NULL
 `topic_tags`) and calls Claude to fill them in. If Claude/the proxy is
 unreachable, summary rows try OpenAI next, then get a deterministic extractive
-fallback (or the accepted placeholder when there is no text), so health checks
-are not blocked by an external LLM outage. Mirrors the `sweep_unclassified.py` pattern: same shape,
-predictable, no surprises.
+fallback (or the accepted placeholder when there is no text), so rows reach a
+consistent terminal state despite an external LLM outage.
 
-Designed to run as a step in .github/workflows/scrape.yml AFTER the main
-scrape. Catches anything the scrape missed (Anthropic transient outage,
-single-article failures, etc.). Re-running with no NULL rows is a no-op.
+This is a manual recovery utility for anything the daily scrape missed after a
+provider outage or single-article failure. Re-running with no NULL rows is a no-op.
 
 Env required:
-  SUPABASE_URL
-  SUPABASE_SERVICE_KEY  (write access)
+  DATABASE_URL
+  OPENAI_API_KEY
   ANTHROPIC_API_KEY
 """
 
@@ -116,7 +114,7 @@ def _needs_summary(row: dict) -> bool:
     """True when the row still needs a terminal summary value.
 
     Blank rows are work even with no usable text: they should be written to the
-    accepted placeholder so health checks do not flag them forever. Existing
+    accepted placeholder so they are not retried forever. Existing
     placeholders are only retryable when we have text that Claude/OpenAI/fallback can
     turn into something better.
     """

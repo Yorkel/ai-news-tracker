@@ -199,7 +199,7 @@ def normalise_url(u: str) -> str:
 
 
 def build_text_clean(title: str | None, body: str | None, max_words: int = MAX_SNIPPET_WORDS) -> str:
-    """Build the title + first N words snippet that the classifier expects."""
+    """Build the title + first N body words stored for review and search."""
     title = (title or "").strip()
     body = (body or "").strip()
     if not body:

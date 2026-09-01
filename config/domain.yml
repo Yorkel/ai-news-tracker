@@ -423,11 +423,8 @@ places:
 # windows, articles.week_number, the dashboard's week selector and the weekly
 # reset.
 #
-# Changed from tuesday to friday on 2026-08-29: this tracker feeds a Friday
-# Substack post, so the week the curator triages must END on Thursday, not
-# on Monday. Left on tuesday it inherited the education newsletter's cycle
-# and the freshest three days sat in an "in progress" week the selector
-# would not show.
+# Friday starts the publishing week, so the curator's review window ends on
+# Thursday before newsletter preparation.
 #
 # ⚠️ Changing this shifts week_number for articles ALREADY stored. Existing
 # rows keep the number they were given at scrape time; only new rows use the
@@ -441,9 +438,7 @@ summaries:
   unavailable_text: Summary unavailable
 
 relevance:
-  # Starter list — NEEDS REVIEW against real scraped output before the
-  # scheduled workflows are switched on. Matched against the TITLE only
-  # (see run.py), so terms that only ever appear in body text are wasted.
+  # Matched against the title by default; selected sources opt into body matching.
   keywords:
     - ai
     - artificial intelligence
@@ -779,9 +774,7 @@ relevance:
     - thesun.co.uk
 
 geography:
-  # OFF for this tracker. The education tracker vetoed any article mentioning
-  # a non-UK place, which for AI would drop most of what matters — the White
-  # House, Brussels, Beijing, Stanford, and every US lab.
+  # Global AI coverage must not be rejected merely for mentioning a non-UK place.
   veto_non_uk: false
   negative_country_keywords: []
   default_country: uk

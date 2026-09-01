@@ -498,11 +498,7 @@ def _looks_like_refusal(s: str) -> bool:
 
 # ─── Enrichment: geographic_focus + topic_tags ───────────────────────────────
 
-# NOTE: this prompt was inherited from the education newsletter this project was
-# generalised from, and still asked for education tags long after the tracker
-# moved to AI. It produced "ai-in-classrooms" on 874 articles, plus
-# "teacher-pay" and "exam-results" on stories about Nvidia earnings and
-# military AI. Rewritten 2026-09-01 for this tracker's actual subject.
+# AI-specific enrichment schema used for geographic focus and topic tags.
 _ENRICH_SYSTEM = """You tag articles for an AI news tracker. It covers AI \
 governance and policy, geopolitics, safety and security, research, public \
 sector deployment, and the AI industry.
