@@ -281,18 +281,16 @@ streams:
 # regardless of where the publisher is.
 # ─────────────────────────────────────────────────────────────────────────
 places:
-  order: [UK, Scotland, Wales, NI, Ireland, EU, US, Global]
-  # Scotland, Wales and NI exist as places only because of the Google News
-  # jurisdiction queries — no publisher feed in the roster covers Wales or
-  # Northern Ireland at all.
-  Scotland:
-    - google_news_scotland
-  Wales:
-    - google_news_wales
-  NI:
-    - google_news_ni
+  order: [UK, Ireland, EU, US, Global]
+  # Scotland, Wales and Northern Ireland sit UNDER UK rather than having their
+  # own chips. They were briefly separate, which put three near-empty tabs
+  # beside a busy one. The devolved Google News queries still exist as distinct
+  # SOURCES, so a nation can be isolated by source if that is ever wanted.
   UK:
     - google_news_uk
+    - google_news_scotland
+    - google_news_wales
+    - google_news_ni
     - bbc_tech
     - ft_tech
     - theregister_ai
