@@ -45,7 +45,7 @@ def main():
     div[data-testid="collapsedControl"] { display: none !important; }
     /* Pull main content flush with the viewport top so the grey header bar
        hugs the top of the window with no Streamlit whitespace above it. */
-    .block-container { padding-top: 1rem !important; }
+    .block-container { padding-top: 2.6rem !important; }
     /* Hide Streamlit's "Press ↵ to submit" helper text under text inputs. */
     [data-testid="InputInstructions"] { display: none !important; }
     </style>
@@ -64,7 +64,7 @@ def main():
         )
     _header_html = (
         f"<div style=\"background:{NAVY};padding:16px 28px;"
-        f"margin:-1rem -2rem 18px -2rem;display:flex;align-items:center;"
+        f"margin:0 -2rem 18px -2rem;display:flex;align-items:center;"
         f"border-bottom:1px solid {DUSK_DEEP};\">"
         f"{_logo_html}"
         f"<div>"
