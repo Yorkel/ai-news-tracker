@@ -24,10 +24,10 @@ from dashboard import thoughts as TH
 from dashboard.data import (
     clear_stream_override, record_stream_override,
     delete_decision, fetch_article_text, is_authenticated, load_decisions,
-    record_decision, record_summary, record_topic_sentence,
+    record_decision, record_summary,
 )
-from src.inference.summarise import extract_topic_sentence, summarise_article
-from dashboard.palette import (style, INFO, INFO_SOFT, KEEP, KEEP_SOFT, MUTED, PENDING, REJECT)
+from src.inference.summarise import summarise_article
+from dashboard.palette import (style, INFO, INFO_SOFT, KEEP, MUTED, PENDING, REJECT)
 
 
 def _clean(v):
@@ -339,36 +339,10 @@ def _render_triage_card(row: dict):
                 unsafe_allow_html=True,
             )
 
-        # Triage shows the EXTRACTIVE topic sentence (verbatim from the article)
-        # - quicker for the curator to trust during keep/reject. The polished
-        # AI summary lives on the Draft page. Both are stored separately.
-        topic_sentence = _clean(row.get("topic_sentence"))
-        with st.expander("📌 Topic sentence", expanded=False):
-            if topic_sentence:
-                st.markdown(
-                    f"<div style='background:{KEEP_SOFT};border-left:3px solid {KEEP};"
-                    f"padding:8px 12px;'>{_html(topic_sentence)}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    style("<div style='background:{SURFACE_ALT};border-left:3px solid {FAINT};"
-                          "padding:8px 12px;color:{MUTED};font-style:italic;'>")
-                    + "No topic sentence yet</div>",
-                    unsafe_allow_html=True,
-                )
-            if auth:
-                if st.button(
-                    "📌 Regenerate topic sentence", key=f"topic_{url}",
-                    use_container_width=True,
-                    help="Pull a key sentence verbatim from the article "
-                         "(its own words - quick to check).",
-                ):
-                    with st.spinner("Finding a key sentence…"):
-                        body = fetch_article_text(url)
-                        new_ts = extract_topic_sentence(title=title, text=body)
-                    record_topic_sentence(url, new_ts)
-                    st.rerun(scope="fragment")
+        # The extractive "topic sentence" block was removed on 2026-09-01:
+        # redundant next to the AI summary below, and mostly rendered as
+        # "No topic sentence yet". extract_topic_sentence() and
+        # record_topic_sentence() remain available if it is ever wanted back.
 
         # AI summary: same AI-backed generation as the Draft page, surfaced
         # here so a curator can fill a blank summary at review time. The scheduled

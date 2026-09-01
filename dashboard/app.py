@@ -20,7 +20,7 @@ from dashboard.data import (
     init_session_state, record_feedback,
 )
 from dashboard.pages import triage, select_categories, draft, sources, thoughts_page
-from dashboard.palette import DUSK_DEEP, MUTED, style
+from dashboard.palette import DUSK_DEEP, DUSK_MUTED, DUSK_TEXT, MUTED, style
 from dashboard.gate import require_password
 from dashboard import streams as S
 from dashboard import thoughts as TH
@@ -51,17 +51,33 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # Header bar.
+    # Header bar. Previously this rendered ONLY when dashboard/logo.png existed,
+    # and it does not, so the site had no title at all. The title is now always
+    # shown; the logo is used alongside it if the file is ever added.
     _logo_path = Path(__file__).parent / "logo.png"
+    _logo_html = ""
     if _logo_path.exists():
-        logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
-        st.markdown(f"""
-        <div style='background:{NAVY};
-                    padding:18px 28px;margin:-1rem -2rem 20px -2rem;
-                    display:flex;align-items:center;border-bottom:1px solid {DUSK_DEEP};'>
-            <img src='data:image/png;base64,{logo_b64}' style='height:80px;'/>
+        _logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
+        _logo_html = (
+            f"<img src='data:image/png;base64,{_logo_b64}' "
+            f"style='height:52px;margin-right:18px;'/>"
+        )
+    st.markdown(f"""
+    <div style='background:{NAVY};
+                padding:16px 28px;margin:-1rem -2rem 18px -2rem;
+                display:flex;align-items:center;border-bottom:1px solid {DUSK_DEEP};'>
+        {_logo_html}
+        <div>
+            <div style='color:{DUSK_TEXT};font-size:22px;font-weight:700;
+                        letter-spacing:-0.2px;line-height:1.1;'>
+                Louise&#39;s AI News Tracker
+            </div>
+            <div style='color:{DUSK_MUTED};font-size:13px;margin-top:3px;'>
+                Governance, geopolitics, safety, research, deployment
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     # Two DIFFERENT kinds of destination, so two separate controls:
     #   STREAM_NAV — content lanes. "Which articles am I looking at?"
