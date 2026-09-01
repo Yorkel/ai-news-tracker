@@ -396,8 +396,11 @@ sources:
     type: rss
     scraper: src.scraping.rss_adapter
     params: {feed_url: "https://rss.arxiv.org/rss/cs.LG"}
-    disabled: false
-    # ⚠️ Very high volume. Enable last, and only with the filter tuned.
+    disabled: true
+    # DISABLED 2026-09-01. It alone produced 582 of 1,805 articles — a third of
+    # the entire database in one feed, and ~580 more every week. Pure machine
+    # learning preprints, the furthest of the three arXiv categories from this
+    # tracker's beat. cs.AI and cs.CY stay enabled.
 
   # ─────────────────────────────────────────────────────────────────────
   # Added 2026-08-29 from AI-Governance-Analysis-UK-ROI (corpus weights in
