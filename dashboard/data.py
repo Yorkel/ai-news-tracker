@@ -148,11 +148,18 @@ def _last_tuesday(today: date | None = None) -> date:  # noqa: N802 (kept: call 
 def week_processing_status() -> dict:
     """Lightweight pipeline-status for the dashboard banner.
 
-    The dashboard only shows CLASSIFIED articles, so articles that are scraped
-    but not yet classified/summarised are invisible here. This queries the
-    `articles` table directly to count, for the current Tue→Tue week, how many
-    are still unprocessed (unclassified or blank summary). Returns {} on any
-    error so a status hiccup never breaks the dashboard.
+    Counts how many of THIS WEEK's articles still have no summary.
+
+    It used to also count articles missing a row in `classify_newsletter` and
+    call them "still being processed". That is wrong for this tracker: there is
+    no classifier (Stage 1 — see README), that table is permanently empty, and
+    so every article counted as unprocessed and the banner could never clear.
+    It reported 1157 pending against ~600 articles, because unclassified and
+    blank-summary were summed over the same rows.
+
+    Summaries are a real, fixable condition — they need an LLM key and a run
+    with enrichment enabled — so that is all this reports now.
+    Returns {} on any error so a status hiccup never breaks the dashboard.
     """
     try:
         client = get_client()
@@ -171,23 +178,13 @@ def week_processing_status() -> dict:
         # and the banner cried "still processing" for already-classified articles
         # Filtering to the review window preserves recurring items from trusted sources.
         # urls returns at most ~50 rows, never hits the cap, and scales.
-        week_urls = [a["url"] for a in arts]
-        classified = {
-            r["url"]
-            for r in (
-                client.table("classify_newsletter")
-                .select("url").in_("url", week_urls).execute().data
-                or []
-            )
-        } if week_urls else set()
-        unclassified = sum(1 for a in arts if a["url"] not in classified)
         blank_summary = sum(1 for a in arts if not clean_text(a.get("summary")))
         return {
             "since": since,
             "total": len(arts),
-            "unclassified": unclassified,
+            "unclassified": 0,   # no classifier in this tracker; see docstring
             "blank_summary": blank_summary,
-            "ok": unclassified == 0 and blank_summary == 0,
+            "ok": blank_summary == 0,
         }
     except Exception:
         return {}

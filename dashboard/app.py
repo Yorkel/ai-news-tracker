@@ -205,18 +205,16 @@ def main():
     st.markdown("---")
 
     # ── Pipeline status banner ───────────────────────────────────────────────
-    # The dashboard only shows classified articles, so anything scraped-but-not-
-    # yet-processed is invisible below. Warn the curator instead of letting it
-    # look like "nothing happened this week".
+    # Articles without a summary are still shown and fully usable; this is a
+    # nudge, not a warning that anything is missing from the list below.
     _status = week_processing_status()
     if _status and not _status.get("ok"):
-        _pending = _status.get("unclassified", 0) + _status.get("blank_summary", 0)
         _blank_summaries = _status.get("blank_summary", 0)
-        st.warning(
-            f"⚠️ **{_pending} article(s) from this week are still being processed** "
-            "(not yet categorised or summarised) and aren't shown below yet. This "
-            "normally clears within a few minutes of the morning update. If it's "
-            "still here later, the pipeline may need attention."
+        _total = _status.get("total", 0)
+        st.info(
+            f"{_blank_summaries} of this week's {_total} articles have no summary yet. "
+            "They are all listed below and can be triaged as normal — a summary is "
+            "optional. Generating them needs an LLM key."
         )
         if _blank_summaries and st.session_state.get("authenticated"):
             if st.button(
