@@ -22,6 +22,22 @@ from dashboard.data import (
 from dashboard.pages import triage, sources, thoughts_page
 from dashboard.palette import DUSK_DEEP, DUSK_MUTED, DUSK_TEXT, MUTED, style
 from dashboard.gate import require_password
+
+
+def _read_build_id() -> str:
+    """Short SHA of the checkout, read once when this module is imported."""
+    import subprocess
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, timeout=4,
+        ).stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+_BUILD_ID = _read_build_id()
 from dashboard import streams as S
 from dashboard import thoughts as TH
 from dashboard.data import record_source_suggestion, load_stream_overrides, load_decisions
@@ -58,17 +74,6 @@ def main():
     # are looking at the local app or a Streamlit Cloud deploy that has not
     # rebuilt — which cost a lot of confusion over changes that were live
     # locally and stale online.
-    def _build_id() -> str:
-        import subprocess
-        try:
-            sha = subprocess.run(
-                ["git", "rev-parse", "--short", "HEAD"],
-                cwd=str(Path(__file__).resolve().parent.parent),
-                capture_output=True, text=True, timeout=4,
-            ).stdout.strip()
-            return sha or "unknown"
-        except Exception:
-            return "unknown"
 
     _logo_path = Path(__file__).parent / "logo.png"
     _logo_html = ""
@@ -88,7 +93,7 @@ def main():
         f"letter-spacing:-0.2px;line-height:1.1;\">Louise&#39;s AI News Tracker</div>"
         f"<div style=\"color:{DUSK_MUTED};font-size:13px;margin-top:3px;\">"
         f"Governance, geopolitics, safety, research, deployment"
-        f"<span style=\"opacity:.55;margin-left:10px;\">build {_build_id()}</span></div>"
+        f"<span style=\"opacity:.55;margin-left:10px;\">build {_BUILD_ID}</span></div>"
         f"</div></div>"
     )
     st.markdown(_header_html, unsafe_allow_html=True)
