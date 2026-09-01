@@ -1,30 +1,33 @@
-beautifulsoup4==4.14.2
-ftfy==6.3.1
-matplotlib==3.10.7
-numpy==2.3.4
-pandas==2.3.3
+# Runtime dependencies: the scraping pipeline, enrichment and the Streamlit
+# dashboard. This is the file Streamlit Community Cloud installs, so it is
+# deliberately kept small — the training stack (torch, transformers,
+# sentence-transformers, scikit-learn) lives in requirements-ml.txt and is
+# NOT needed to run the tracker. Installing it here would put the image
+# several GB over Community Cloud's limits.
+
+# ── Scraping and ingestion ───────────────────────────────────────────────
 requests==2.32.5
-scikit-learn==1.8.0
-seaborn==0.13.2
-ipykernel==7.0.1
-sentence-transformers==5.3.0
-transformers==5.5.0
-torch==2.11.0
+feedparser==6.0.12            # RSS/Atom + Google Alert parsing (rss_adapter)
+beautifulsoup4==4.14.2
+lxml==6.1.1                   # tree builder for BeautifulSoup HTML scrapers
+trafilatura==2.1.0            # main-article body extraction
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+python-dotenv==1.0.1
+
+# ── Database ─────────────────────────────────────────────────────────────
+# Two interchangeable backends behind the same query API (see
+# src/scraping/pg_client.py): DATABASE_URL selects Postgres via psycopg,
+# otherwise the Supabase client is used.
+psycopg[binary]==3.3.4
+supabase==2.28.0
+
+# ── Enrichment ───────────────────────────────────────────────────────────
 anthropic==0.88.0
 openai==2.30.0
-python-dotenv==1.0.1
-# scraping module (src/scraping/)
-supabase==2.28.0
-PyYAML==6.0.3
-python-dateutil==2.9.0.post0
-feedparser==6.0.12          # RSS + Google Alert parsing, required by rss_adapter.py
-lxml==6.1.1                 # tree builder for BeautifulSoup HTML scrapers (gov_scot, gtcs, etc.)
-trafilatura==2.1.0          # main-article body extraction (ignores nav/boilerplate); primary path in common.extract_body_text
-# serving module (src/serving/), FastAPI model API
-fastapi==0.136.1
-uvicorn[standard]==0.47.0
-pydantic==2.12.5
-# dashboard (dashboard/), Streamlit curator UI
+
+# ── Dashboard ────────────────────────────────────────────────────────────
 streamlit==1.56.0
-openpyxl==3.1.5             # used by review.py / organise.py for .xlsx download buttons
-prometheus-fastapi-instrumentator==7.1.0
+pandas==2.3.3
+numpy==2.3.4
+openpyxl==3.1.5               # .xlsx export on the Draft page
