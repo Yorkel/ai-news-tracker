@@ -21,7 +21,7 @@ import yaml
 
 DEFAULT_SOURCES_YML = Path(__file__).resolve().parent / "sources.yml"
 
-VALID_TYPES = {"web", "newsletter", "rss", "google_alert"}
+VALID_TYPES = {"web", "newsletter", "rss", "google_alert", "google_news"}
 
 
 def load_sources(path: Path | None = None) -> list[dict[str, Any]]:

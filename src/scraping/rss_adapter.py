@@ -185,6 +185,13 @@ def scrape(*, source: str, feed_url: str,
         return []
 
     is_google_alert = "google.com/alerts" in feed_url or "google.co.uk/alerts" in feed_url
+    # Google News SEARCH feeds (news.google.com/rss/search?q=...) are a different
+    # thing from Google Alerts. Every item links to an opaque news.google.com
+    # token that cannot be resolved to the publisher server-side — following it
+    # lands on consent.google.com, and the newer CBMi… tokens are not decodable.
+    # The feed does carry the real publisher in <source>, so that is used as the
+    # article's source label instead of the query name.
+    is_google_news = "news.google.com/rss/search" in feed_url
     articles: list[Article] = []
     seen_urls: set[str] = set()
 
@@ -214,16 +221,30 @@ def scrape(*, source: str, feed_url: str,
         article_source = source
         if is_google_alert:
             article_source = _domain_as_source(url) or source
+        # NOTE: the publisher IS available here as e["source"]["title"]
+        # ("Belfast Telegraph", "Law Society of Scotland"), and an earlier
+        # version used it as the article's source. That was reverted: streams
+        # and places are both mapped BY SOURCE NAME in config/domain.yml, so
+        # relabelling to the publisher meant google_news_wales never appeared
+        # in the data and all 133 items fell through to place="Global" —
+        # defeating the only Wales/NI/Scotland coverage in the roster.
+        # The query name is kept as the source so routing works; the publisher
+        # is carried in `extra` below, and surfacing it in the dashboard needs
+        # a column of its own rather than overloading `source`.
 
         articles.append(Article(
             url=url,
             title=title,
             article_date=article_date,
             source=article_source,
-            source_type="google_alert" if is_google_alert else "rss",
+            source_type=("google_alert" if is_google_alert
+                         else "google_news" if is_google_news else "rss"),
             text=text,
             text_clean=build_text_clean(title, text),
-            extra={"alert_name": source} if is_google_alert else {},
+            extra=({"alert_name": source} if is_google_alert
+                   else {"query_name": source,
+                         "publisher": ((e.get("source") or {}).get("title") or "").strip()}
+                   if is_google_news else {}),
         ))
 
     return articles

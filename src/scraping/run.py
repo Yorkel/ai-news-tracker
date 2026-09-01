@@ -98,7 +98,7 @@ def _scrape_one(src: dict, *, since: date | None,
             raise RuntimeError(f"web source {src['name']} must specify 'scraper'")
         mod = importlib.import_module(scraper_path)
         items = mod.scrape(**params)
-    elif src["type"] in ("rss", "google_alert"):
+    elif src["type"] in ("rss", "google_alert", "google_news"):
         scraper_path = src.get("scraper") or "src.scraping.rss_adapter"
         mod = importlib.import_module(scraper_path)
         items = mod.scrape(**params)

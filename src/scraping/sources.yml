@@ -1068,6 +1068,71 @@ sources:
     disabled: false
     # Irish business and finance. ⚠️ Subscription — expect truncated bodies.
 
+  # ─────────────────────────────────────────────────────────────────────
+  # GOOGLE NEWS JURISDICTION QUERIES — recovered from Yorkel/ai_tracker
+  # (radar/sources.py) on 2026-08-31, before that project is retired.
+  #
+  # Each is a constructed query, not a publisher feed:
+  #     (AI topic) AND (place synonyms) AND (governance qualifier)
+  # Together they return ~500 items and are the ONLY Wales and Northern
+  # Ireland coverage anywhere in the roster.
+  #
+  # ⚠️ Three known limits, all inherent to Google News and accepted deliberately:
+  #  1. Items link to an opaque news.google.com token. It cannot be resolved to
+  #     the publisher server-side (following it lands on consent.google.com, and
+  #     the CBMi… tokens are not decodable), so news.google.com is approved and
+  #     the stored URL is a redirect rather than a permalink. It opens correctly
+  #     in a browser.
+  #  2. Body extraction will fail for the same reason — these are headline-only.
+  #  3. URL dedup cannot collapse the same story appearing in two queries, since
+  #     each carries a different token. Expect UK/Scotland overlap.
+  # The publisher IS recoverable: rss_adapter reads <source> and uses it as the
+  # article's source label, so the dashboard shows "Law Society of Scotland",
+  # not "google_news_scotland".
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: google_news_uk
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28UK+OR+%22United+Kingdom%22+OR+Britain+OR+ICO+OR+DSIT%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # UK-wide AI governance conversation
+
+  - name: google_news_scotland
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28Scotland+OR+Scottish+OR+Holyrood%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Scottish AI governance conversation
+
+  - name: google_news_wales
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28Wales+OR+Welsh+OR+Senedd%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Welsh AI governance — the ONLY Wales coverage in the roster
+
+  - name: google_news_ni
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28%22Northern+Ireland%22+OR+Stormont%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # NI AI governance — the ONLY Northern Ireland coverage in the roster
+
+  - name: google_news_ireland
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28Ireland+OR+Irish+OR+Dublin+OR+%22Data+Protection+Commission%22%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=IE&ceid=IE:en"}
+    disabled: false
+    # Irish AI governance conversation, Irish edition
+
+  - name: google_news_eu
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+%22AI+Act%22+OR+%22AI+governance%22%29+%28EU+OR+%22European+Union%22+OR+Brussels+OR+%22European+Commission%22%29+%28regulation+OR+governance+OR+policy+OR+law+OR+ethics+OR+guidance%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # EU AI Act and governance conversation
+
 # ─────────────────────────────────────────────────────────────────────────
 # KNOWN GAPS — wanted, no working feed found on 2026-08-29
 #

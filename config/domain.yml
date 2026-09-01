@@ -100,6 +100,12 @@ streams:
       - miles_brundage
       - mit_tech_review_ai
       - rte_brainstorm
+      - google_news_uk
+      - google_news_scotland
+      - google_news_wales
+      - google_news_ni
+      - google_news_ireland
+      - google_news_eu
       - bbc_tech
       - nyt_tech
       - ft_tech
@@ -274,8 +280,18 @@ streams:
 # regardless of where the publisher is.
 # ─────────────────────────────────────────────────────────────────────────
 places:
-  order: [UK, Ireland, EU, US, Global]
+  order: [UK, Scotland, Wales, NI, Ireland, EU, US, Global]
+  # Scotland, Wales and NI exist as places only because of the Google News
+  # jurisdiction queries — no publisher feed in the roster covers Wales or
+  # Northern Ireland at all.
+  Scotland:
+    - google_news_scotland
+  Wales:
+    - google_news_wales
+  NI:
+    - google_news_ni
   UK:
+    - google_news_uk
     - bbc_tech
     - ft_tech
     - theregister_ai
@@ -306,6 +322,7 @@ places:
     - the_ferret
     - we_and_ai
   Ireland:
+    - google_news_ireland
     - business_post
     - silicon_republic
     - irish_tech_news
@@ -320,6 +337,7 @@ places:
     - ronan_kennedy
     - rte_brainstorm
   EU:
+    - google_news_eu
     - algorithmwatch
     - bruegel
     - ec_digital_strategy
@@ -592,6 +610,9 @@ relevance:
     - podcasters.spotify.com
     - youtube.com
     - chinatalk.media
+    # Google News search feeds resolve only to this redirect host — see the
+    # note on the google_news_* sources in src/scraping/sources.yml.
+    - news.google.com
     - shows.acast.com
     - nytimes.com
     - latent.space
