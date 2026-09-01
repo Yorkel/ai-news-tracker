@@ -27,3 +27,11 @@ streamlit==1.56.0
 pandas==2.3.3
 numpy==2.3.4
 openpyxl==3.1.5               # .xlsx export on the Draft page
+
+# ── FastAPI dashboard (web/) ─────────────────────────────────────────────
+# Server-rendered replacement for the Streamlit app: a click is a form POST
+# and a redirect, so nothing re-renders except the page requested.
+fastapi==0.136.1
+uvicorn[standard]==0.47.0
+jinja2==3.1.6
+python-multipart==0.0.20

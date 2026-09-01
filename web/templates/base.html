@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title>
+<style>
+:root{
+  --surface:#FFF8F2; --panel:#FDEFE4; --sunk:#F6E3D4; --rule:#F0D9C7;
+  --ink:#3B2154; --ink-soft:#5C3D6E; --muted:#8A6E8C; --faint:#C0A8BA;
+  --dusk:#4A2A6A; --dusk-deep:#2E1741; --dusk-text:#F6DCC6; --dusk-muted:#C9A9C4;
+  --accent:#F2683C; --accent-soft:#FDE4D8; --keep:#2E8B6F; --keep-soft:#E4F1EA;
+  --reject:#C2325C; --reject-soft:#FBE2E8; --gold:#E9A13B;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--ink);
+     font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+a{color:var(--ink)}
+header{background:var(--dusk);padding:14px 26px;border-bottom:1px solid var(--dusk-deep)}
+header h1{margin:0;font-size:21px;color:var(--dusk-text);letter-spacing:-.2px}
+header p{margin:2px 0 0;font-size:13px;color:var(--dusk-muted)}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 26px 0}
+nav a{padding:6px 13px;border-radius:16px;text-decoration:none;font-size:13.5px;
+      background:var(--panel);border:1px solid var(--rule);white-space:nowrap}
+nav a.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+nav a .n{opacity:.6;font-size:12px;margin-left:5px}
+.sub{display:flex;flex-wrap:wrap;gap:6px;padding:10px 26px;align-items:center}
+.sub a{padding:3px 10px;border-radius:12px;text-decoration:none;font-size:12.5px;
+       background:transparent;border:1px solid var(--rule);color:var(--muted)}
+.sub a.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+main{padding:6px 26px 60px;max-width:1080px}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
+.bar form{display:flex;gap:6px}
+input[type=search],select{padding:6px 10px;border:1px solid var(--rule);border-radius:6px;
+  background:#fff;font-size:13.5px;color:var(--ink)}
+.btn{padding:6px 12px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);
+  border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn:hover{background:var(--sunk)}
+.btn.keep{background:var(--keep);border-color:var(--keep);color:#fff}
+.btn.reject{background:var(--reject);border-color:var(--reject);color:#fff}
+.btn.small{padding:3px 9px;font-size:12px}
+.count{color:var(--muted);font-size:13px}
+article{border:1px solid var(--rule);border-radius:8px;padding:13px 15px;margin-bottom:10px;
+  background:#fff}
+article.kept{border-left:4px solid var(--keep)}
+article.rejected{border-left:4px solid var(--reject);opacity:.55}
+article h2{margin:0 0 5px;font-size:16px;line-height:1.35;font-weight:650}
+article h2 a{text-decoration:none}
+article h2 a:hover{text-decoration:underline}
+.meta{color:var(--muted);font-size:12px;margin-bottom:7px}
+.tag{background:var(--panel);border:1px solid var(--rule);border-radius:8px;
+  padding:1px 7px;font-size:11px;margin-right:4px;color:var(--ink-soft)}
+.summary{font-size:13.5px;color:var(--ink-soft);margin:7px 0;
+  background:var(--panel);border-left:3px solid var(--accent);padding:7px 11px;border-radius:0 5px 5px 0}
+.why{color:var(--muted);font-style:italic}
+.acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.acts form{display:inline}
+.pager{display:flex;gap:10px;align-items:center;margin:18px 0}
+footer{color:var(--faint);font-size:11.5px;padding:0 26px 30px}
+</style></head><body>
+<header>
+  <h1>Louise&#39;s AI News Tracker</h1>
+  <p>Governance, geopolitics, safety, research, deployment</p>
+</header>
+{% block nav %}{% endblock %}
+<main>{% block body %}{% endblock %}</main>
+<footer>build {{ build }} · {{ total_articles }} articles</footer>
+</body></html>
