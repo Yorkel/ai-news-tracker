@@ -56,6 +56,15 @@ def _token(password: str) -> str:
 
 def require_password() -> None:
     """Render the login page and stop, unless already authenticated."""
+    # Local runs skip the gate entirely. The gate exists because the app is on
+    # a public Streamlit Cloud URL; on a laptop it only means retyping a
+    # password on every reload, since Streamlit clears session state each time
+    # and a bookmarked token is easy to lose. Set TRACKER_NO_AUTH=1 in .env.
+    # Streamlit Cloud does not read .env, so the gate stays on there.
+    if str(os.environ.get("TRACKER_NO_AUTH", "")).strip().lower() in {"1", "true", "yes"}:
+        st.session_state.authenticated = True
+        return
+
     expected = _expected()
 
     if st.session_state.get("authenticated"):

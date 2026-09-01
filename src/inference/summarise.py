@@ -113,7 +113,35 @@ CRITICAL behavioural rules:
 - Do NOT hallucinate. Do NOT invent facts, names, findings, or context that are not in the supplied text.
 - Output ONLY the summary text or "Summary unavailable". No preamble.
 
-You will be given example summaries to anchor on, then asked to summarise a new article. Match their style: descriptive, close to source, no commentary."""
+SECOND PARAGRAPH — "Why this matters":
+After the summary, add a blank line and then one short paragraph beginning
+exactly "Why this matters: ".
+
+This paragraph is the ONE place interpretation is allowed, and it is written
+for a specific reader: an AI engineer working on evaluation, who writes a
+weekly roundup of AI governance, safety, security, policy and geopolitics read
+through an evaluation lens. Her subject is how AI is measured, checked and
+claimed about — what an evaluation actually establishes, what institutions then
+do on the strength of it, and who can see or challenge the number.
+
+So in that paragraph, name the claim about an AI system that is at stake and
+the question worth asking about it: whether the claim holds, what it licenses,
+or who gets to check it. A chip export control is an evaluation story because
+the threshold is set on a measured quantity. A safety framework is one because
+it commits a lab to act on a test result. A regulation is one because someone
+has to verify compliance.
+
+Rules for the second paragraph:
+- 1-2 sentences. No hedging padding.
+- It may ASK a question or name what is unverified. It must NOT assert facts
+  that are absent from the article.
+- If the article carries no claim about an AI system worth interrogating, write
+  exactly: Why this matters: Background rather than an evaluation story.
+- Never flatter the reader or address her by name.
+
+You will be given example summaries to anchor on, then asked to summarise a new
+article. Those examples show the style of the FIRST paragraph only — match them
+for the summary, then add the "Why this matters" paragraph as instructed."""
 
 
 def _load_few_shot_examples(n: int = N_FEW_SHOT_EXAMPLES, seed: int | None = None) -> list[dict]:
@@ -470,18 +498,32 @@ def _looks_like_refusal(s: str) -> bool:
 
 # ─── Enrichment: geographic_focus + topic_tags ───────────────────────────────
 
-_ENRICH_SYSTEM = """You tag UK education-newsletter articles. The newsletter covers \
-UK schools, FE, and pre-HE education (NOT higher education).
+# NOTE: this prompt was inherited from the education newsletter this project was
+# generalised from, and still asked for education tags long after the tracker
+# moved to AI. It produced "ai-in-classrooms" on 874 articles, plus
+# "teacher-pay" and "exam-results" on stories about Nvidia earnings and
+# military AI. Rewritten 2026-09-01 for this tracker's actual subject.
+_ENRICH_SYSTEM = """You tag articles for an AI news tracker. It covers AI \
+governance and policy, geopolitics, safety and security, research, public \
+sector deployment, and the AI industry.
 
 For each article, return STRICT JSON with these two fields and no commentary:
 
-- "geographic_focus": exactly one of "England", "Scotland", "Wales", \
-"Northern Ireland", "UK-wide", "International".
+- "geographic_focus": exactly one of "UK", "Scotland", "Wales", \
+"Northern Ireland", "Ireland", "EU", "US", "China", "Global".
+  Use "Global" when no single jurisdiction is the focus.
 - "topic_tags": list of EXACTLY 3 lowercase, hyphen-separated tags. Examples: \
-"send", "teacher-pay", "ai-in-classrooms", "raac", "child-poverty", \
-"ofsted-inspections", "school-funding", "mental-health", "exam-results". \
-Pick tags that are specific enough to be filter-useful but standardised \
-(reuse common tags rather than inventing new ones). Always return exactly 3.
+"ai-act", "ai-regulation", "export-controls", "compute", "chips", \
+"model-release", "evaluation", "benchmarks", "red-teaming", "alignment", \
+"interpretability", "existential-risk", "incident", "cybersecurity", \
+"data-protection", "surveillance", "copyright", "labour-market", \
+"public-sector-ai", "procurement", "data-centres", "energy", "funding", \
+"open-weights", "agents", "misinformation". \
+Pick tags specific enough to be filter-useful but standardised (reuse common \
+tags rather than inventing new ones). Always return exactly 3.
+
+Do NOT use education tags such as "ai-in-classrooms", "teacher-training" or \
+"exam-results" unless the article is genuinely about education.
 
 Output ONLY the JSON object. No markdown fences, no preamble."""
 
