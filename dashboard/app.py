@@ -54,6 +54,22 @@ def main():
     # Header bar. Previously this rendered ONLY when dashboard/logo.png existed,
     # and it does not, so the site had no title at all. The title is now always
     # shown; the logo is used alongside it if the file is ever added.
+    # Build marker. Without it there is no way to tell from the page whether you
+    # are looking at the local app or a Streamlit Cloud deploy that has not
+    # rebuilt — which cost a lot of confusion over changes that were live
+    # locally and stale online.
+    def _build_id() -> str:
+        import subprocess
+        try:
+            sha = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=str(Path(__file__).resolve().parent.parent),
+                capture_output=True, text=True, timeout=4,
+            ).stdout.strip()
+            return sha or "unknown"
+        except Exception:
+            return "unknown"
+
     _logo_path = Path(__file__).parent / "logo.png"
     _logo_html = ""
     if _logo_path.exists():
@@ -71,7 +87,8 @@ def main():
         f"<div style=\"color:{DUSK_TEXT};font-size:22px;font-weight:700;"
         f"letter-spacing:-0.2px;line-height:1.1;\">Louise&#39;s AI News Tracker</div>"
         f"<div style=\"color:{DUSK_MUTED};font-size:13px;margin-top:3px;\">"
-        f"Governance, geopolitics, safety, research, deployment</div>"
+        f"Governance, geopolitics, safety, research, deployment"
+        f"<span style=\"opacity:.55;margin-left:10px;\">build {_build_id()}</span></div>"
         f"</div></div>"
     )
     st.markdown(_header_html, unsafe_allow_html=True)
