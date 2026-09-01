@@ -22,6 +22,7 @@ public URL guessing wrong in the permissive direction is unrecoverable.
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import os
 
@@ -41,12 +42,35 @@ def _expected() -> str | None:
     return str(v) if v else None
 
 
+# Query-param key used to stay signed in across reloads. It holds a hash of
+# the password, never the password itself, so the URL cannot be read back into
+# a credential. Anyone holding the full URL is nonetheless as good as holding
+# the password — which is the same trade-off as any "remember me" cookie, and
+# acceptable for a single-curator dashboard.
+_REMEMBER_PARAM = "k"
+
+
+def _token(password: str) -> str:
+    return hashlib.sha256(f"news-tracker:{password}".encode()).hexdigest()[:32]
+
+
 def require_password() -> None:
     """Render the login page and stop, unless already authenticated."""
     if st.session_state.get("authenticated"):
         return
 
     expected = _expected()
+
+    # Already signed in on this browser? Streamlit clears session_state on every
+    # reload, so without this the password would be re-typed on each refresh.
+    if expected is not None:
+        try:
+            if hmac.compare_digest(str(st.query_params.get(_REMEMBER_PARAM, "")),
+                                   _token(expected)):
+                st.session_state.authenticated = True
+                return
+        except Exception:
+            pass
 
     st.markdown(style("""
     <style>
@@ -76,6 +100,7 @@ def require_password() -> None:
             "Password", type="password", label_visibility="collapsed",
             placeholder="Password",
         )
+        remember = st.checkbox("Stay signed in on this browser", value=True)
         ok = st.form_submit_button("Enter", type="primary", use_container_width=True)
 
     if ok:
@@ -83,6 +108,9 @@ def require_password() -> None:
         # length or prefix through timing.
         if hmac.compare_digest(str(pwd), expected):
             st.session_state.authenticated = True
+            if remember:
+                # Survives reload and can be bookmarked.
+                st.query_params[_REMEMBER_PARAM] = _token(expected)
             st.rerun()
         else:
             st.error("Wrong password." if pwd else "Enter the password.")
