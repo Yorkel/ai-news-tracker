@@ -16,8 +16,8 @@ import pandas as pd
 from dashboard.config import NAVY
 from dashboard.styles import get_css
 from dashboard.data import (
-    generate_missing_article_summaries, load_classified_articles,
-    init_session_state, record_feedback, week_processing_status,
+    load_classified_articles,
+    init_session_state, record_feedback,
 )
 from dashboard.pages import triage, select_categories, draft, sources, thoughts_page
 from dashboard.palette import DUSK_DEEP, MUTED, style
@@ -204,34 +204,11 @@ def main():
 
     st.markdown("---")
 
-    # ── Pipeline status banner ───────────────────────────────────────────────
-    # Articles without a summary are still shown and fully usable; this is a
-    # nudge, not a warning that anything is missing from the list below.
-    _status = week_processing_status()
-    if _status and not _status.get("ok"):
-        _blank_summaries = _status.get("blank_summary", 0)
-        _total = _status.get("total", 0)
-        st.info(
-            f"{_blank_summaries} of this week's {_total} articles have no summary yet. "
-            "They are all listed below and can be triaged as normal — a summary is "
-            "optional. Generating them needs an LLM key."
-        )
-        if _blank_summaries and st.session_state.get("authenticated"):
-            if st.button(
-                "Generate missing summaries",
-                key="_generate_missing_summaries",
-                type="primary",
-            ):
-                with st.spinner("Generating summaries..."):
-                    result = generate_missing_article_summaries()
-                if result.get("fail"):
-                    st.error(
-                        f"Generated {result.get('ok', 0)} summary/s; "
-                        f"{result.get('fail', 0)} failed."
-                    )
-                else:
-                    st.toast(f"Generated {result.get('ok', 0)} summary/s.")
-                st.rerun()
+    # The pipeline status banner was removed on 2026-09-01. It reported how
+    # many of the week's articles had no summary, which is not a problem worth
+    # a banner: those articles are listed and fully triageable, and a summary
+    # is optional. Summaries are generated per-article from the Triage cards.
+    # week_processing_status() is kept in data.py for anything that wants it.
 
     page = st.session_state.current_page
 
