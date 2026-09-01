@@ -111,6 +111,7 @@ streams:
       - ft_tech
       - four_zero_four_media
       - the_markup
+      - conspicuous_cognition
       - thejournal_ie
       - irish_independent
       - irish_examiner
@@ -402,6 +403,7 @@ places:
     - tech_policy_press
     - victoria_krakovna
   Global:
+    - conspicuous_cognition
     - nature_news
     - rest_of_world
     - ai_frontiers
@@ -647,6 +649,7 @@ relevance:
     - irishexaminer.com
     - dublininquirer.com
     - thecurrency.news
+    - conspicuouscognition.com
     - businesspost.ie
     # Ireland (added 2026-08-29)
     - siliconrepublic.com

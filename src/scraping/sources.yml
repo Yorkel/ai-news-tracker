@@ -982,6 +982,18 @@ sources:
     # headlined purely in business terms will be missed.
     # ⚠️ Subscription site — expect truncated bodies after backfill.
 
+  - name: conspicuous_cognition
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.conspicuouscognition.com/feed"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Dan Williams on epistemology, rationality and belief. Not an AI feed —
+    # filtered and body-matched, because his AI pieces ("Most Questions About
+    # AI Aren't About AI") run under headlines that never say so.
+
   - name: silicon_republic
     type: rss
     scraper: src.scraping.rss_adapter

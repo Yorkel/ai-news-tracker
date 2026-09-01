@@ -62,22 +62,19 @@ def main():
             f"<img src='data:image/png;base64,{_logo_b64}' "
             f"style='height:52px;margin-right:18px;'/>"
         )
-    st.markdown(f"""
-    <div style='background:{NAVY};
-                padding:16px 28px;margin:-1rem -2rem 18px -2rem;
-                display:flex;align-items:center;border-bottom:1px solid {DUSK_DEEP};'>
-        {_logo_html}
-        <div>
-            <div style='color:{DUSK_TEXT};font-size:22px;font-weight:700;
-                        letter-spacing:-0.2px;line-height:1.1;'>
-                Louise&#39;s AI News Tracker
-            </div>
-            <div style='color:{DUSK_MUTED};font-size:13px;margin-top:3px;'>
-                Governance, geopolitics, safety, research, deployment
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    _header_html = (
+        f"<div style=\"background:{NAVY};padding:16px 28px;"
+        f"margin:-1rem -2rem 18px -2rem;display:flex;align-items:center;"
+        f"border-bottom:1px solid {DUSK_DEEP};\">"
+        f"{_logo_html}"
+        f"<div>"
+        f"<div style=\"color:{DUSK_TEXT};font-size:22px;font-weight:700;"
+        f"letter-spacing:-0.2px;line-height:1.1;\">Louise&#39;s AI News Tracker</div>"
+        f"<div style=\"color:{DUSK_MUTED};font-size:13px;margin-top:3px;\">"
+        f"Governance, geopolitics, safety, research, deployment</div>"
+        f"</div></div>"
+    )
+    st.markdown(_header_html, unsafe_allow_html=True)
 
     # Two DIFFERENT kinds of destination, so two separate controls:
     #   STREAM_NAV — content lanes. "Which articles am I looking at?"
