@@ -276,7 +276,45 @@ def render(df):
     ).astype(bool)].copy()
     filtered = filtered.sort_values("_article_date", ascending=False, na_position="last")
 
-    st.info(f"{len(filtered)} pending article(s)")
+    # ── Pagination ──────────────────────────────────────────────────────────
+    # Streamlit re-runs the whole script on every interaction, so every keep,
+    # reject or expander re-rendered every widget on the page. With a week of
+    # articles that was 700-2500 buttons per click, and it was unusably slow.
+    # Rendering a page at a time cuts the widget count roughly a hundredfold.
+    PER_PAGE = 25
+    total = len(filtered)
+    n_pages = max(1, -(-total // PER_PAGE))
+
+    page_key = f"_pg_{selected_label}"
+    if st.session_state.get(page_key, 1) > n_pages:
+        st.session_state[page_key] = 1
+    page_no = int(st.session_state.get(page_key, 1))
+
+    c_info, c_prev, c_page, c_next = st.columns([4, 1, 1.6, 1])
+    with c_info:
+        lo = 0 if total == 0 else (page_no - 1) * PER_PAGE + 1
+        hi = min(page_no * PER_PAGE, total)
+        st.info(f"{total} pending article(s)" if total <= PER_PAGE
+                else f"{total} pending article(s) — showing {lo}-{hi}")
+    if n_pages > 1:
+        with c_prev:
+            if st.button("← Prev", key=f"prev_{selected_label}",
+                         use_container_width=True, disabled=page_no <= 1):
+                st.session_state[page_key] = page_no - 1
+                st.rerun()
+        with c_page:
+            st.markdown(
+                style(f"<div style='text-align:center;color:{{MUTED}};"
+                      f"padding-top:6px;font-size:13px;'>page {page_no} of {n_pages}</div>"),
+                unsafe_allow_html=True,
+            )
+        with c_next:
+            if st.button("Next →", key=f"next_{selected_label}",
+                         use_container_width=True, disabled=page_no >= n_pages):
+                st.session_state[page_key] = page_no + 1
+                st.rerun()
+
+    filtered = filtered.iloc[(page_no - 1) * PER_PAGE: page_no * PER_PAGE]
 
     # ── Article cards ───────────────────────────────────────────────────────
     for idx, row in filtered.iterrows():
