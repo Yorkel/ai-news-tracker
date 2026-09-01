@@ -19,7 +19,7 @@ python-dotenv==1.0.1
 # Two interchangeable backends behind the same query API (see
 # src/scraping/pg_client.py): DATABASE_URL selects Postgres via psycopg,
 # otherwise the Supabase client is used.
-psycopg[binary]==3.3.4
+psycopg[binary]==3.3.4   # required by pg_client.py — the Postgres/Neon backend
 supabase==2.28.0
 
 # ── Enrichment ───────────────────────────────────────────────────────────
