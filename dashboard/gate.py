@@ -56,10 +56,21 @@ def _token(password: str) -> str:
 
 def require_password() -> None:
     """Render the login page and stop, unless already authenticated."""
-    if st.session_state.get("authenticated"):
-        return
-
     expected = _expected()
+
+    if st.session_state.get("authenticated"):
+        # Top up the remember-me token on EVERY authenticated run, not only at
+        # login. Streamlit can discard a query-param write made in the same
+        # script run that set it, so writing it once on submit was unreliable —
+        # which is why "stay signed in" appeared to do nothing. Re-asserting it
+        # here is idempotent and always lands.
+        if expected is not None and st.session_state.get("remember_me", True):
+            try:
+                if st.query_params.get(_REMEMBER_PARAM) != _token(expected):
+                    st.query_params[_REMEMBER_PARAM] = _token(expected)
+            except Exception:
+                pass
+        return
 
     # Already signed in on this browser? Streamlit clears session_state on every
     # reload, so without this the password would be re-typed on each refresh.
@@ -108,10 +119,17 @@ def require_password() -> None:
         # length or prefix through timing.
         if hmac.compare_digest(str(pwd), expected):
             st.session_state.authenticated = True
+            st.session_state.remember_me = bool(remember)
             if remember:
-                # Survives reload and can be bookmarked.
+                # Written for the NEXT page load, so the password is not
+                # retyped after a refresh.
                 st.query_params[_REMEMBER_PARAM] = _token(expected)
-            st.rerun()
+            # Deliberately NO st.rerun() here. Streamlit discards a
+            # query-param write when the same script run then reruns, so the
+            # token never reached the URL and "stay signed in" silently did
+            # nothing. Returning lets main() carry on and render the dashboard
+            # in this run instead, and the param survives.
+            return
         else:
             st.error("Wrong password." if pwd else "Enter the password.")
 
