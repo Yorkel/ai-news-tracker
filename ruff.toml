@@ -1,11 +1,16 @@
-# Tooling config. Ruff is the linter (see .pre-commit-config.yaml + tests.yml CI).
-[tool.ruff]
+# Ruff config. Deliberately NOT in pyproject.toml: Streamlit Cloud and uv both
+# detect a pyproject.toml and install dependencies from it, and this project's
+# pyproject had only [tool.ruff] with no [project] section — so the deploy
+# installed nothing from requirements.txt and the app died on
+# "ModuleNotFoundError: psycopg". Keeping tool config here leaves
+# requirements.txt as the single, unambiguous dependency source.
+
 line-length = 120
 target-version = "py312"
 # Notebooks / assessment material / experiments are not part of the shipped code.
 extend-exclude = ["notebooks", "experiments", ".venv"]
 
-[tool.ruff.lint]
+[lint]
 # Start with Pyflakes ("F") only: real correctness smells — unused imports (F401),
 # undefined names (F821), f-strings without placeholders (F541), duplicate dict keys
 # (F601). Import-sorting ("I") is deliberately OFF for now (large reorder diff +
