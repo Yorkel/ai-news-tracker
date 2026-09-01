@@ -10,7 +10,7 @@ The dashboard splits articles into four streams:
 
 How an article gets a stream
 ----------------------------
-There is no classifier at Stage 1, so the stream is derived, not predicted:
+The stream is derived from editorial rules rather than predicted:
 
   1. `geopolitics` keywords are checked against the TITLE first. World and
      security stories cut across every source — a Guardian piece, a CSET
@@ -22,8 +22,7 @@ There is no classifier at Stage 1, so the stream is derived, not predicted:
      than being hidden.
 
 Nothing is written to the articles table, so re-bucketing the entire corpus is
-a config edit — no migration, no re-ingest. When a classifier does arrive it
-can replace step 2 without changing anything that calls this module.
+a config edit — no migration and no re-ingest.
 
 Title-only matching mirrors the ingest filter in src/scraping/run.py, which
 found body matching pulled in articles that mentioned a country in passing.

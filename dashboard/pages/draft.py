@@ -395,8 +395,4 @@ def render(df):
         "Tip: hit **Save** on any edited summary before downloading - "
         "unsaved edits will still appear in the Excel, but won't persist if you reload."
     )
-
-    # The weekly archive + reset runs automatically every Monday via the
-    # weekly_reset GitHub Action (no manual button needed on this page).
-
     # Feedback box has been moved to app.py (renders at the bottom of every page).

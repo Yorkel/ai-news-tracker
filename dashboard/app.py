@@ -240,18 +240,12 @@ def main():
 
     st.markdown("---")
 
-    # The pipeline status banner was removed on 2026-09-01. It reported how
-    # many of the week's articles had no summary, which is not a problem worth
-    # a banner: those articles are listed and fully triageable, and a summary
-    # is optional. Summaries are generated per-article from the Triage cards.
-    # week_processing_status() is kept in data.py for anything that wants it.
-
     page = st.session_state.current_page
 
     df = load_classified_articles()
 
     if df.empty:
-        st.error("No classified articles found in Supabase. Run the inference pipeline (s07 → classify_via_api → s10) to populate `classify_newsletter`.")
+        st.error("No articles found. Run the scraper to populate the database.")
         st.stop()
 
     if "article_date" in df.columns:
@@ -294,7 +288,7 @@ def main():
         # Purpose 1: the reading list. One row per kept article, this lane only.
         kept = X.kept_frame(lane, load_decisions(),
                             stream=None if is_all else stream_id)
-        c_dl, c_note = st.columns([1.4, 4])
+        c_dl, _c_sp = st.columns([1.4, 4])
         with c_dl:
             st.download_button(
                 f"⬇ CSV ({len(kept)} kept)",
@@ -303,14 +297,7 @@ def main():
                 mime="text/csv",
                 use_container_width=True,
                 disabled=kept.empty,
-                help="Articles you kept. Keep some first if this is empty.",
-            )
-        with c_note:
-            st.caption(
-                "Kept articles only — the week's reading list."
-                if is_all else
-                "Kept articles only — the week's reading list for this stream. "
-                "Every stream in one file is on **Draft newsletter**."
+                help="Articles you kept, as a CSV. Keep some first if this is empty.",
             )
 
         if lane.empty:

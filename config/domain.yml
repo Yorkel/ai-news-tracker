@@ -8,10 +8,7 @@ database:
   classification_table: classify_newsletter
   dashboard_view: v_dashboard
 
-# Categories are NOT used yet. Nothing classifies articles until a classifier
-# is wired up, and the dashboard renders uncategorised articles fine (the
-# v_dashboard view LEFT JOINs predictions). These are here so the labels are
-# settled before that step, not because anything reads them today.
+# Curator-facing category labels used by the dashboard.
 labels:
   order:
     - governance
@@ -46,8 +43,8 @@ labels:
 # ─────────────────────────────────────────────────────────────────────────
 # STREAMS — the four lanes the dashboard splits articles into.
 #
-# There is no classifier yet (Stage 1), so a stream is decided by WHICH SOURCE
-# published the article. That is deterministic, needs no model, and re-buckets
+# A stream is decided by which source published the article. That is
+# deterministic and re-buckets
 # the whole corpus the instant this file changes — nothing is stored on the
 # article row, so there is no migration and no re-ingest.
 #
@@ -423,8 +420,8 @@ places:
 #
 # The publishing week runs from this weekday to the day before it, and every
 # part of the pipeline reads it from here: the scrape's --weekly-backfill
-# windows, articles.week_number, the dashboard's week selector, the weekly
-# reset and the pipeline health check.
+# windows, articles.week_number, the dashboard's week selector and the weekly
+# reset.
 #
 # Changed from tuesday to friday on 2026-08-29: this tracker feeds a Friday
 # Substack post, so the week the curator triages must END on Thursday, not

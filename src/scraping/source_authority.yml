@@ -1,5 +1,0 @@
-# Source authority weights used by src/inference/scoring.py.
-# Range: 0.0 low authority/off-scope to 1.0 highest authority.
-
-_default: 0.6
-example_feed: 0.5

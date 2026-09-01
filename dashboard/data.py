@@ -14,7 +14,7 @@ modules, not here.
 from __future__ import annotations
 
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import streamlit as st
 import pandas as pd
@@ -111,7 +111,6 @@ def load_classified_articles(min_week: int | None = None) -> pd.DataFrame:
     # a bare .execute() silently dropped the oldest articles once v_dashboard
     # passed 1000 rows (e.g. "search all weeks" missing old items). Loop in
     # 1000-row pages until a short page signals the end. Matches the pagination
-    # in src/monitoring/pipeline_health.py.
     PAGE = 1000
     rows: list[dict] = []
     off = 0
@@ -131,119 +130,6 @@ def load_classified_articles(min_week: int | None = None) -> pd.DataFrame:
     if "week_number" in df.columns:
         df["week_number"] = pd.to_numeric(df["week_number"], errors="coerce").astype("Int64")
     return df
-
-
-def _last_tuesday(today: date | None = None) -> date:  # noqa: N802 (kept: call sites)
-    """Most recent Tuesday strictly before today — the start of the current
-    Tue→Tue newsletter week. Matches src/monitoring/pipeline_health.py."""
-    today = today or datetime.now(timezone.utc).date()
-    from src.scraping.common import week_anchor
-    offset = (today.weekday() - week_anchor()) % 7
-    if offset == 0:
-        offset = 7
-    return today - timedelta(days=offset)
-
-
-@st.cache_data(ttl=120)
-def week_processing_status() -> dict:
-    """Lightweight pipeline-status for the dashboard banner.
-
-    Counts how many of THIS WEEK's articles still have no summary.
-
-    It used to also count articles missing a row in `classify_newsletter` and
-    call them "still being processed". That is wrong for this tracker: there is
-    no classifier (Stage 1 — see README), that table is permanently empty, and
-    so every article counted as unprocessed and the banner could never clear.
-    It reported 1157 pending against ~600 articles, because unclassified and
-    blank-summary were summed over the same rows.
-
-    Summaries are a real, fixable condition — they need an LLM key and a run
-    with enrichment enabled — so that is all this reports now.
-    Returns {} on any error so a status hiccup never breaks the dashboard.
-    """
-    try:
-        client = get_client()
-        since = _last_tuesday().isoformat()
-        arts = (
-            client.table("articles")
-            .select("url, summary")
-            .gte("article_date", since)
-            .execute()
-            .data
-            or []
-        )
-        # Only check whether THIS week's article urls are classified. A bare
-        # select on classify_newsletter is capped at 1000 rows by PostgREST, so
-        # once the table passed 1000 rows it silently dropped classified urls
-        # and the banner cried "still processing" for already-classified articles
-        # Filtering to the review window preserves recurring items from trusted sources.
-        # urls returns at most ~50 rows, never hits the cap, and scales.
-        blank_summary = sum(1 for a in arts if not clean_text(a.get("summary")))
-        return {
-            "since": since,
-            "total": len(arts),
-            "unclassified": 0,   # no classifier in this tracker; see docstring
-            "blank_summary": blank_summary,
-            "ok": blank_summary == 0,
-        }
-    except Exception:
-        return {}
-
-
-def generate_missing_article_summaries(limit: int = 25) -> dict:
-    """Fill this week's blank article-level summaries from the dashboard.
-
-    Writes to `articles.summary`, not curator_decisions, because this is the
-    pipeline health field. Provider order is handled by summarise_article:
-    Claude -> OpenAI -> deterministic extractive fallback.
-    """
-    client = get_client()
-    since = _last_tuesday().isoformat()
-    rows = (
-        client.table("articles")
-        .select("id, url, title, text, text_clean, summary, article_date")
-        .gte("article_date", since)
-        .execute()
-        .data
-        or []
-    )
-    missing = [r for r in rows if not clean_text(r.get("summary"))]
-    selected = missing[:limit]
-
-    if not selected:
-        return {"since": since, "scanned": len(rows), "missing": 0, "ok": 0, "fail": 0}
-
-    from src.inference.summarise import summarise_article
-
-    ok = 0
-    fail = 0
-    errors: list[str] = []
-    for row in selected:
-        title = clean_text(row.get("title"))
-        body = clean_text(row.get("text")) or clean_text(row.get("text_clean"))
-        try:
-            summary = summarise_article(title=title, text=body, category=None)
-            client.table("articles").update({
-                "summary": summary,
-                "summary_generated_at": "now()",
-            }).eq("id", row["id"]).execute()
-            ok += 1
-        except Exception as e:
-            fail += 1
-            errors.append(f"{row.get('url')}: {type(e).__name__}: {e}")
-
-    load_classified_articles.clear()
-    week_processing_status.clear()
-    return {
-        "since": since,
-        "scanned": len(rows),
-        "missing": len(missing),
-        "attempted": len(selected),
-        "ok": ok,
-        "fail": fail,
-        "errors": errors[:5],
-    }
-
 
 @st.cache_data(ttl=60)
 def load_decisions() -> dict[str, dict]:
