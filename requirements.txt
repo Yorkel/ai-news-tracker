@@ -1,9 +1,5 @@
-# Runtime dependencies: the scraping pipeline, enrichment and the Streamlit
-# dashboard. This is the file Streamlit Community Cloud installs, so it is
-# deliberately kept small — the training stack (torch, transformers,
-# sentence-transformers, scikit-learn) lives in requirements-ml.txt and is
-# NOT needed to run the tracker. Installing it here would put the image
-# several GB over Community Cloud's limits.
+# Runtime dependencies for the scraper, enrichment and Streamlit dashboard.
+# Streamlit Community Cloud installs this file via dashboard/requirements.txt.
 
 # ── Scraping and ingestion ───────────────────────────────────────────────
 requests==2.32.5

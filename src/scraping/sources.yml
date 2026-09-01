@@ -6,7 +6,7 @@
 # and a plausible latest-item date on 2026-08-29. Feeds that merely returned
 # HTTP 200 with valid XML were NOT accepted: see ada_lovelace under KNOWN GAPS.
 #
-# EVERYTHING IS disabled: true. Per README, test each one before enabling:
+# New sources start disabled and are tested before enabling:
 #   1. Confirm its domain is in relevance.approved_domains in config/domain.yml.
 #   2. python -m src.scraping.try_source <name>
 #   3. Flip `disabled: false` once the output looks right.
@@ -15,7 +15,7 @@
 # an item must also match a relevance keyword. Feeds that are already
 # AI-scoped by construction do not carry it.
 #
-# type: rss | web | newsletter | google_alert
+# type: rss | web | google_alert | google_news
 
 sources:
 

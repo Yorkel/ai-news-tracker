@@ -314,8 +314,7 @@ def main() -> int:
     if not primary_ok:
         # Primary provider is down. Fill summaries with whatever works, then
         # STILL fill topic sentences from titles so the dashboard is never left
-        # with a blank topic line. Tags wait for a later healthy sweep (which the
-        # health check now flags — see pipeline_health.py).
+        # with a blank topic line. Tags wait for a later healthy sweep.
         summary_ok = 0
         # When Claude is primary-but-down, OpenAI may still work for summaries.
         # When OpenAI is primary-but-down, don't retry it — go straight to local.

@@ -22,13 +22,10 @@ from .nations import nation_for_source
 # -----------------------------------------------------------------------
 # Article row shape
 # -----------------------------------------------------------------------
-# Every source (web scraper or newsletter parser) returns Article objects.
+# Every source adapter returns Article objects.
 # `to_record()` produces a dict ready for upsert into articles.
 
-MAX_SNIPPET_WORDS = 80  # INFERENCE snippet cap (title + first 80 words). NOTE: this is
-# NOT the training shape — training text_clean was the full newsletter description
-# (up to ~815 words). So this is a KNOWN train/serve skew, not a match, and contributes
-# to production weighted-F1 0.630 vs val 0.750. See docs/decisions/datasheet.md.
+MAX_SNIPPET_WORDS = 80
 
 
 @dataclass
@@ -37,7 +34,7 @@ class Article:
     title: str | None = None
     article_date: date | None = None
     source: str = ""
-    source_type: str = "web"           # 'web' | 'newsletter' | 'rss'
+    source_type: str = "web"           # 'web' | 'rss' | 'google_news'
     text: str | None = None            # full body
     text_clean: str | None = None      # title + first ~80 words; built if not provided
     week_number: int | None = None
@@ -82,7 +79,7 @@ def week_anchor() -> int:
     """Weekday index the publishing week starts on (Mon=0 … Sun=6).
 
     Read from `week.anchor_day` in config/domain.yml so the scrape, the
-    dashboard, the weekly reset and the health check cannot drift apart.
+    dashboard and weekly reset cannot drift apart.
     Defaults to Friday if the config is missing or unreadable.
     """
     try:

@@ -4,9 +4,8 @@ Loads sources.yml into typed source descriptors used by run.py and try_source.py
 
 A source descriptor looks like:
     {
-        "name": "wonkhe_newsletter",
-        "type": "newsletter",
-        "ingestion": "disk",          # 'disk' | 'gmail' | None for web/rss
+        "name": "example_source",
+        "type": "rss",
         "scraper": None,              # web sources may name a module here
         "params": { ... }             # passed through to the scraper as kwargs
     }
@@ -21,7 +20,7 @@ import yaml
 
 DEFAULT_SOURCES_YML = Path(__file__).resolve().parent / "sources.yml"
 
-VALID_TYPES = {"web", "newsletter", "rss", "google_alert", "google_news"}
+VALID_TYPES = {"web", "rss", "google_alert", "google_news"}
 
 
 def load_sources(path: Path | None = None) -> list[dict[str, Any]]:

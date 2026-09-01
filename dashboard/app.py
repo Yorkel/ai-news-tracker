@@ -19,7 +19,7 @@ from dashboard.data import (
     load_classified_articles,
     init_session_state, record_feedback,
 )
-from dashboard.pages import triage, select_categories, draft, sources, thoughts_page
+from dashboard.pages import triage, sources, thoughts_page
 from dashboard.palette import DUSK_DEEP, DUSK_MUTED, DUSK_TEXT, MUTED, style
 from dashboard.gate import require_password
 from dashboard import streams as S
@@ -101,13 +101,17 @@ def main():
     # "all" is a pseudo-stream: it is not in config/domain.yml, it just skips
     # the per-stream filter so every lane is shown together.
     STREAM_NAV = ["stream:all"] + [f"stream:{s}" for s in S.ORDER]
-    TOOL_NAV = ["Select Categories", "Newsletter Draft", "Thoughts", "Sources"]
+    # Categorise and Draft newsletter were removed from the nav on 2026-09-01.
+    # They are the education-newsletter workflow this project was generalised
+    # from (keep -> assign a category -> generate a grouped issue), and the
+    # weekly Substack does not work that way. The all-streams CSV they carried
+    # is on the "All" stream page, so nothing is lost. The pages still exist in
+    # dashboard/pages/ if that workflow is ever wanted back.
+    TOOL_NAV = ["Thoughts", "Sources"]
     NAV = STREAM_NAV + TOOL_NAV
     NAV_LABELS = {f"stream:{s}": S.SHORT[s] for s in S.ORDER}
     NAV_LABELS["stream:all"] = "All"
     NAV_LABELS.update({
-        "Select Categories": "Categorise",
-        "Newsletter Draft": "Draft newsletter",
         "Thoughts": "Thoughts",
         "Sources": "Manage sources",
     })
@@ -223,7 +227,6 @@ def main():
     st.markdown('<div class="tool-nav"></div>', unsafe_allow_html=True)
     col_tools, _tool_spacer = st.columns([4, 3])
     with col_tools:
-        st.caption("Then, across all streams:")
         tool_choice = st.segmented_control(
             "Tools", TOOL_NAV,
             format_func=lambda x: NAV_LABELS.get(x, x),
@@ -319,10 +322,6 @@ def main():
             )
         else:
             triage.render(lane)
-    elif page == "Select Categories":
-        select_categories.render(df)
-    elif page == "Newsletter Draft":
-        draft.render(df)
     elif page == "Thoughts":
         thoughts_page.render(df)
     elif page == "Sources":

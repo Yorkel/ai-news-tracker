@@ -9,9 +9,9 @@ public, and the commit history is read by people assessing the work.
 ## What this is
 
 A news ingestion pipeline and curator dashboard feeding a weekly Substack.
-125 RSS/sitemap/Google-News sources across seven editorial streams
+124 active RSS/sitemap/Google-News sources across seven editorial streams
 (governance, geopolitics, safety, research, technical, deployment, podcasts),
-with a UK/Scotland/Wales/NI/Ireland/EU/US/Global geography filter.
+with UK/Ireland/EU/US/Global geography filters.
 
 ## Running it
 

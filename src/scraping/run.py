@@ -1,7 +1,7 @@
 """
 run.py
 Orchestrator. Iterates every enabled source in sources.yml, runs each,
-upserts into Supabase articles, and logs one scrape_runs row per source.
+upserts articles, and logs one scrape_runs row per source.
 
 Modes:
 
@@ -12,9 +12,9 @@ Modes:
   python -m src.scraping.run --since 2023-01-01
 
   # Single source (debugging — but try_source.py is usually better)
-  python -m src.scraping.run --source wonkhe_newsletter --since 2026-05-12
+  python -m src.scraping.run --source govuk_ai_search --since 2026-05-12
 
-  # Dry run — runs scrapers, prints counts, never writes to Supabase
+  # Dry run — runs scrapers, prints counts, never writes to the database
   python -m src.scraping.run --since 2026-05-12 --dry-run
 """
 
@@ -83,16 +83,7 @@ def _scrape_one(src: dict, *, since: date | None,
     # whose headlines are oblique, where title-only silently loses real items.
     match_body = bool(params.pop("match_body", False))
 
-    if src["type"] == "newsletter":
-        ingestion = src.get("ingestion", "disk")
-        if ingestion == "disk":
-            mod = importlib.import_module("src.scraping.newsletters.from_disk")
-        elif ingestion == "gmail":
-            mod = importlib.import_module("src.scraping.newsletters.gmail")
-        else:
-            raise RuntimeError(f"unknown newsletter ingestion '{ingestion}'")
-        items = mod.scrape(**params)
-    elif src["type"] == "web":
+    if src["type"] == "web":
         scraper_path = src.get("scraper")
         if not scraper_path:
             raise RuntimeError(f"web source {src['name']} must specify 'scraper'")
@@ -112,7 +103,7 @@ def _filter_items(items: list, source: str,
                   apply_filter: bool, require_keywords: list | None,
                   match_body: bool = False) -> list:
     """Apply the education-relevance filter to Article items. Centralised here so
-    every scraper type (rss_adapter, auto_listing, custom HTML scrapers) gets the
+    every configured scraper type gets the
     same behaviour with one flip of `apply_relevance_filter: true` in sources.yml.
     Rejected items are logged to data/archive/rejected/<date>_<source>.csv.
     """

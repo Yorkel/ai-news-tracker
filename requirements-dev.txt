@@ -1,8 +1,4 @@
-# Dev / test dependencies.
-# Deliberately lean so CI stays fast — only what the tests in tests/ need to
-# import the modules under test. NOT the full runtime (no torch/transformers/
-# streamlit). For the full pipeline use requirements.txt; for the API image use
-# requirements-api.txt.
+# Lean test and lint dependencies used by local checks and CI.
 pytest==8.3.4
 ruff==0.9.6
 requests==2.32.5
