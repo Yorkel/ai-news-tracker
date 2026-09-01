@@ -84,10 +84,13 @@ def main():
     #   TOOL_NAV   — workflow steps acting across the whole week, whatever lane
     #                you came from. "What am I doing with them?"
     # One flat row implied Sources was a sixth lane of articles, which it is not.
-    STREAM_NAV = [f"stream:{s}" for s in S.ORDER]
+    # "all" is a pseudo-stream: it is not in config/domain.yml, it just skips
+    # the per-stream filter so every lane is shown together.
+    STREAM_NAV = ["stream:all"] + [f"stream:{s}" for s in S.ORDER]
     TOOL_NAV = ["Select Categories", "Newsletter Draft", "Thoughts", "Sources"]
     NAV = STREAM_NAV + TOOL_NAV
     NAV_LABELS = {f"stream:{s}": S.SHORT[s] for s in S.ORDER}
+    NAV_LABELS["stream:all"] = "All"
     NAV_LABELS.update({
         "Select Categories": "Categorise",
         "Newsletter Draft": "Draft newsletter",
@@ -248,12 +251,16 @@ def main():
 
     if page.startswith("stream:"):
         stream_id = page.split(":", 1)[1]
+        is_all = stream_id == "all"
+        _title = "All streams" if is_all else S.DISPLAY.get(stream_id, stream_id)
+        _desc = ("Every lane together, newest first."
+                 if is_all else S.DESCRIPTION.get(stream_id, ""))
         st.markdown(
-            f"### {S.DISPLAY.get(stream_id, stream_id)}\n"
-            f"<span style='color:{MUTED};font-size:13px;'>{S.DESCRIPTION.get(stream_id,'')}</span>",
+            f"### {_title}\n"
+            f"<span style='color:{MUTED};font-size:13px;'>{_desc}</span>",
             unsafe_allow_html=True,
         )
-        lane = df[df["stream"] == stream_id]
+        lane = df if is_all else df[df["stream"] == stream_id]
 
         # Geography filter — composes with the stream rather than replacing it.
         # Only places actually present in this lane are offered, so the control
@@ -268,26 +275,31 @@ def main():
                 lane = lane[lane["place"] == pick]
 
         # Purpose 1: the reading list. One row per kept article, this lane only.
-        kept = X.kept_frame(lane, load_decisions(), stream=stream_id)
+        kept = X.kept_frame(lane, load_decisions(),
+                            stream=None if is_all else stream_id)
         c_dl, c_note = st.columns([1.4, 4])
         with c_dl:
             st.download_button(
                 f"⬇ CSV ({len(kept)} kept)",
                 X.to_csv_bytes(kept),
-                file_name=X.filename(stream_id),
+                file_name=X.filename(None if is_all else stream_id),
                 mime="text/csv",
                 use_container_width=True,
                 disabled=kept.empty,
-                help="Articles you kept in this stream. Keep some first if this is empty.",
+                help="Articles you kept. Keep some first if this is empty.",
             )
         with c_note:
             st.caption(
+                "Kept articles only — the week's reading list."
+                if is_all else
                 "Kept articles only — the week's reading list for this stream. "
                 "Every stream in one file is on **Draft newsletter**."
             )
 
         if lane.empty:
             st.info(
+                "Nothing here yet."
+                if is_all else
                 "No articles in this stream yet. "
                 "Sources are assigned to streams in config/domain.yml."
             )

@@ -1,13 +1,13 @@
 # Repository checkpoint
 
-Last updated: 2026-09-01T14:34:13+0100
+Last updated: 2026-09-01T14:43:00+0100
 Repository: `/Users/qtnzlyo/GitHub/ai-news-tracker`
 Status: active
 
 ## Repository state
 
 - Branch: `main`
-- Commit: `2a57116`
+- Commit: `dcfbdb3`
 - Working tree: local `main` matches `origin/main`; only this checkpoint update is uncommitted.
 - Relevant session IDs: `01a05cd2-b581-77e2-83d1-5271861a91b6`
 
@@ -16,6 +16,7 @@ Status: active
 - The Streamlit dependency drift was fixed and pushed in `e51c7b0`: `dashboard/requirements.txt` now includes root `requirements.txt`, so `psycopg[binary]==3.3.4` is installed for the Neon/Postgres path.
 - Removed inherited unused workflows in `4bf2d9e`; this also removed the active test workflow, leaving only the scheduled scraper workflow.
 - Corrected the misleading processing-status banner and pushed the fix in concurrent commit `2a57116`.
+- Subsequent concurrent commits removed the banner and updated the site header through `dcfbdb3`.
 - Reassessed the current repository as a portfolio piece: approximately 7/10 generally and 6/10 for the judge-protocol/evaluation-engineering role. Strong real-world ownership is obscured by stale documentation, missing CI, incomplete reproducibility, generic rather than project-specific evaluation/governance evidence, and limited direct relevance to judge protocols.
 
 ## Deliverables and changed files
@@ -41,7 +42,7 @@ Status: active
 
 ## Currently active
 
-- Reporting the refreshed portfolio assessment and prioritised improvements.
+- Awaiting user confirmation on an exact portfolio-cleanup scope: accurate README, project-specific operational/evaluation evidence, reproducibility cleanup, and removal of the checkpoint from public tracking while preserving it locally.
 
 ## Not done
 
@@ -56,4 +57,4 @@ Status: active
 
 ## Exact next action
 
-1. If the user authorises portfolio cleanup, first propose an exact diff for an accurate project-specific `README.md` plus a restored minimal test/lint CI workflow; do not commit or push without separate explicit approval.
+1. After the user confirms the proposed file scope, implement and validate the approved portfolio cleanup without committing, pushing, or deploying unless separately authorised.
