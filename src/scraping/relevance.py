@@ -217,6 +217,17 @@ def compile_keyword_patterns(keywords: tuple[str, ...] | list[str]) -> list[re.P
         # This matters in practice: the New York Times writes "A.I.", and
         # title-only filtering silently dropped every one of its AI stories
         # until "a.i." was added as a keyword (verified 2026-08-29).
+        # A trailing "*" means match the stem and anything after it, so one
+        # keyword "govern*" covers governance, governing, governed and
+        # government. Without this, whole-word matching means every form has
+        # to be spelled out, and the ones you forget are silently dropped.
+        if kw_l.endswith("*"):
+            stem = kw_l[:-1].strip()
+            if not stem:
+                continue
+            lead = r"(?<!\w)" if (" " in stem or "-" in stem or "." in stem) else r"\b"
+            patterns.append(re.compile(lead + re.escape(stem) + r"\w*"))
+            continue
         if " " in kw_l or "-" in kw_l or "." in kw_l:
             patterns.append(re.compile(rf"(?<!\w){re.escape(kw_l)}(?!\w)"))
         else:
