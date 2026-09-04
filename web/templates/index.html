@@ -1,77 +1,97 @@
 {% extends "base.html" %}
 {% block nav %}
-<nav>
+<div class="tabs"><div class="wrap"><div class="row">
   {% for s, label, n in stream_tabs %}
-    <a href="{{ url_for('index') }}?stream={{ s }}&week={{ week_idx }}&status={{ status }}"
-       class="{{ 'on' if s == stream else '' }}">{{ label }}<span class="n">{{ n }}</span></a>
+    <a class="tab {{ 'on' if s == stream else '' }}"
+       href="?stream={{ s }}&week={{ week_idx }}&status={{ status }}&place={{ place }}">
+      {{ label }}<span class="n">{{ n }}</span></a>
   {% endfor %}
-</nav>
-<div class="sub">
-  {% for p in places %}
-    <a href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}"
-       class="{{ 'on' if p == place else '' }}">{{ p }}</a>
-  {% endfor %}
-  <span style="width:14px"></span>
-  {% for st_, lbl in [('pending','Pending'),('kept','Kept'),('rejected','Rejected'),('all','All')] %}
-    <a href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ st_ }}"
-       class="{{ 'on' if st_ == status else '' }}">{{ lbl }}</a>
-  {% endfor %}
-</div>
+</div></div></div>
 {% endblock %}
 
 {% block body %}
-<div class="bar">
-  <form method="get">
-    <input type="hidden" name="stream" value="{{ stream }}">
-    <input type="hidden" name="place" value="{{ place }}">
-    <input type="hidden" name="status" value="{{ status }}">
-    <select name="week">
-      {% for i, lbl in week_labels %}
-        <option value="{{ i }}" {{ 'selected' if i == week_idx else '' }}>{{ lbl }}</option>
-      {% endfor %}
-    </select>
-    <input type="search" name="q" value="{{ q }}" placeholder="Search title or summary…">
-    <button class="btn" type="submit">Go</button>
-  </form>
-  <span class="count">{{ total }} article{{ '' if total == 1 else 's' }}</span>
-  <a class="btn" href="{{ url_for('export_csv') }}?stream={{ stream }}&week={{ week_idx }}">⬇ CSV of kept</a>
+<div class="filters">
+  <div class="chips">
+    {% for p in places %}
+      <a class="chip {{ 'on' if p == place else '' }}"
+         href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}">{{ p }}</a>
+    {% endfor %}
+  </div>
+  <div class="sep"></div>
+  <div class="chips">
+    {% for st_, lbl in [('pending','Pending'),('kept','Kept'),('rejected','Rejected'),('all','All')] %}
+      <a class="chip {{ 'on' if st_ == status else '' }}"
+         href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ st_ }}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+  <div class="tools">
+    <form method="get" style="display:flex;gap:7px">
+      <input type="hidden" name="stream" value="{{ stream }}">
+      <input type="hidden" name="place" value="{{ place }}">
+      <input type="hidden" name="status" value="{{ status }}">
+      <select name="week">
+        {% for i, lbl in week_labels %}
+          <option value="{{ i }}" {{ 'selected' if i == week_idx else '' }}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search…">
+      <button class="btn" type="submit">Go</button>
+    </form>
+    <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}">↓ CSV</a>
+  </div>
 </div>
 
+<p class="count">{{ total }} article{{ '' if total == 1 else 's' }}{% if q %} matching “{{ q }}”{% endif %}</p>
+
+<div class="list">
 {% for a in articles %}
-<article class="{{ a.status|lower }}">
-  <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
-  <div class="meta">
-    {{ a.source_label }} · {{ a.article_date }} · {{ a.stream_label }} · {{ a.place }}
-    {% if a.status != 'Pending' %} · <b>{{ a.status }}</b>{% endif %}
+  <div class="item {{ a.status|lower }}">
+    <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
+    <div class="meta">
+      <span class="src">{{ a.source_label }}</span>
+      <span class="dot">·</span><span>{{ a.article_date }}</span>
+      <span class="dot">·</span><span>{{ a.stream_label }}</span>
+      <span class="dot">·</span><span>{{ a.place }}</span>
+      {% if a.status != 'Pending' %}<span class="pill {{ a.status|lower }}">{{ a.status }}</span>{% endif %}
+    </div>
+    {% if a.topic_tags %}
+      <div class="tags">{% for t in a.topic_tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>
+    {% endif %}
+    {% if a.summary_main %}
+      <div class="summary">{{ a.summary_main }}
+        {% if a.summary_why %}<span class="why"><b>Why this matters:</b> {{ a.summary_why }}</span>{% endif %}
+      </div>
+    {% endif %}
+    <div class="acts">
+      <form method="post" action="/act">
+        <input type="hidden" name="url" value="{{ a.url }}">
+        <input type="hidden" name="back" value="{{ back }}">
+        {% if a.status == 'Pending' %}
+          <button class="btn keep" name="action" value="keep">✓ Keep</button>
+          <button class="btn reject" name="action" value="reject">✕ Reject</button>
+        {% else %}
+          <button class="btn" name="action" value="clear">↩ Undo</button>
+        {% endif %}
+      </form>
+      <form method="post" action="/move">
+        <input type="hidden" name="url" value="{{ a.url }}">
+        <input type="hidden" name="back" value="{{ back }}">
+        <select name="stream" onchange="this.form.submit()">
+          <option value="">Move to…</option>
+          {% for s, lbl in move_targets %}<option value="{{ s }}">{{ lbl }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
   </div>
-  {% if a.topic_tags %}<div>{% for t in a.topic_tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>{% endif %}
-  {% if a.summary %}<div class="summary">{{ a.summary_main }}{% if a.summary_why %}<br><span class="why">{{ a.summary_why }}</span>{% endif %}</div>{% endif %}
-  <div class="acts">
-    <form method="post" action="{{ url_for('act') }}">
-      <input type="hidden" name="url" value="{{ a.url }}">
-      <input type="hidden" name="back" value="{{ back }}">
-      <button class="btn keep small" name="action" value="keep">Keep</button>
-      <button class="btn reject small" name="action" value="reject">Reject</button>
-      {% if a.status != 'Pending' %}<button class="btn small" name="action" value="clear">Undo</button>{% endif %}
-    </form>
-    <form method="post" action="{{ url_for('move') }}">
-      <input type="hidden" name="url" value="{{ a.url }}">
-      <input type="hidden" name="back" value="{{ back }}">
-      <select name="stream" onchange="this.form.submit()">
-        <option value="">Move to…</option>
-        {% for s, lbl in move_targets %}<option value="{{ s }}">{{ lbl }}</option>{% endfor %}
-      </select>
-    </form>
-  </div>
-</article>
 {% else %}
-<p class="count">Nothing here.</p>
+  <p class="empty">Nothing here.</p>
 {% endfor %}
+</div>
 
 {% if pages > 1 %}
 <div class="pager">
-  {% if page > 1 %}<a class="btn" href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ status }}&q={{ q }}&page={{ page - 1 }}">← Prev</a>{% endif %}
-  <span class="count">page {{ page }} of {{ pages }}</span>
+  {% if page > 1 %}<a class="btn" href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ status }}&q={{ q }}&page={{ page - 1 }}">← Previous</a>{% endif %}
+  <span class="count">{{ page }} / {{ pages }}</span>
   {% if page < pages %}<a class="btn" href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ status }}&q={{ q }}&page={{ page + 1 }}">Next →</a>{% endif %}
 </div>
 {% endif %}

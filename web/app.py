@@ -59,7 +59,7 @@ def _split_summary(text: str | None) -> tuple[str, str]:
     marker = "Why this matters:"
     if marker in t:
         head, _, tail = t.partition(marker)
-        return head.strip(), (marker + " " + tail.strip()).strip()
+        return head.strip(), tail.strip()
     return t, ""
 
 

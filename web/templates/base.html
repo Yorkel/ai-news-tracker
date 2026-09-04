@@ -2,65 +2,135 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ── Sunset palette ─────────────────────────────────────────────────────── */
 :root{
-  --surface:#FFF8F2; --panel:#FDEFE4; --sunk:#F6E3D4; --rule:#F0D9C7;
-  --ink:#3B2154; --ink-soft:#5C3D6E; --muted:#8A6E8C; --faint:#C0A8BA;
-  --dusk:#4A2A6A; --dusk-deep:#2E1741; --dusk-text:#F6DCC6; --dusk-muted:#C9A9C4;
-  --accent:#F2683C; --accent-soft:#FDE4D8; --keep:#2E8B6F; --keep-soft:#E4F1EA;
-  --reject:#C2325C; --reject-soft:#FBE2E8; --gold:#E9A13B;
+  --paper:#FFFBF7; --card:#FFFFFF; --panel:#FDF0E6; --sunk:#F7E5D7; --rule:#EFDDCC;
+  --ink:#2E1B3F; --ink-2:#5C3D6E; --muted:#8C7291; --faint:#B9A6C0;
+  --dusk:#3D2159; --dusk-2:#241239; --dusk-ink:#F7DFC8; --dusk-muted:#C4A6C6;
+  --accent:#E85B2E; --accent-2:#F0864F; --accent-soft:#FDE6D9;
+  --keep:#2E8B6F; --keep-soft:#E6F2EC;
+  --reject:#B92B54; --reject-soft:#FBE3E9;
+  --gold:#DE9A2E;
+  --shadow:0 1px 2px rgba(46,27,63,.05), 0 4px 14px rgba(46,27,63,.05);
+  --radius:12px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#191024; --card:#221632; --panel:#2A1B3D; --sunk:#33224A; --rule:#3A2751;
+    --ink:#F4E9F5; --ink-2:#D8C4DD; --muted:#A78FAD; --faint:#7C6485;
+    --accent-soft:#3A2033; --keep-soft:#1B3A31; --reject-soft:#3A1B28;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--surface);color:var(--ink);
-     font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-a{color:var(--ink)}
-header{background:var(--dusk);padding:14px 26px;border-bottom:1px solid var(--dusk-deep)}
-header h1{margin:0;font-size:21px;color:var(--dusk-text);letter-spacing:-.2px}
-header p{margin:2px 0 0;font-size:13px;color:var(--dusk-muted)}
-nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 26px 0}
-nav a{padding:6px 13px;border-radius:16px;text-decoration:none;font-size:13.5px;
-      background:var(--panel);border:1px solid var(--rule);white-space:nowrap}
-nav a.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
-nav a .n{opacity:.6;font-size:12px;margin-left:5px}
-.sub{display:flex;flex-wrap:wrap;gap:6px;padding:10px 26px;align-items:center}
-.sub a{padding:3px 10px;border-radius:12px;text-decoration:none;font-size:12.5px;
-       background:transparent;border:1px solid var(--rule);color:var(--muted)}
-.sub a.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-main{padding:6px 26px 60px;max-width:1080px}
-.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 16px}
-.bar form{display:flex;gap:6px}
-input[type=search],select{padding:6px 10px;border:1px solid var(--rule);border-radius:6px;
-  background:#fff;font-size:13.5px;color:var(--ink)}
-.btn{padding:6px 12px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);
-  border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
-.btn:hover{background:var(--sunk)}
-.btn.keep{background:var(--keep);border-color:var(--keep);color:#fff}
-.btn.reject{background:var(--reject);border-color:var(--reject);color:#fff}
-.btn.small{padding:3px 9px;font-size:12px}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit}
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+.masthead{background:linear-gradient(135deg,var(--dusk) 0%,var(--dusk-2) 100%);
+  padding:22px 0 20px;border-bottom:3px solid var(--accent)}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+.masthead h1{margin:0;font-family:Fraunces,Georgia,serif;font-weight:600;
+  font-size:30px;letter-spacing:-.4px;color:var(--dusk-ink);line-height:1.1}
+.masthead .tag{margin:5px 0 0;font-size:13.5px;color:var(--dusk-muted);letter-spacing:.1px}
+
+/* ── Stream tabs ────────────────────────────────────────────────────────── */
+.tabs{position:sticky;top:0;z-index:20;background:var(--paper);
+  border-bottom:1px solid var(--rule);box-shadow:0 1px 0 rgba(46,27,63,.03)}
+.tabs .row{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding:0}
+.tabs .row::-webkit-scrollbar{display:none}
+.tab{padding:13px 15px;text-decoration:none;font-size:14px;font-weight:500;
+  color:var(--muted);white-space:nowrap;border-bottom:2.5px solid transparent;
+  transition:color .12s,border-color .12s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab .n{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:600;
+  background:var(--panel);color:var(--muted);border-radius:9px;padding:1px 7px}
+.tab.on .n{background:var(--accent);color:#fff}
+
+/* ── Filter row ─────────────────────────────────────────────────────────── */
+.filters{display:flex;flex-wrap:wrap;gap:16px;align-items:center;
+  padding:14px 0 6px;font-size:13px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{padding:4px 11px;border-radius:20px;text-decoration:none;font-size:12.5px;
+  color:var(--muted);border:1px solid var(--rule);transition:all .12s}
+.chip:hover{border-color:var(--faint);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:500}
+.sep{width:1px;height:20px;background:var(--rule)}
+.tools{display:flex;gap:8px;align-items:center;margin-left:auto}
+input[type=search],select{padding:7px 11px;border:1px solid var(--rule);border-radius:8px;
+  background:var(--card);font:inherit;font-size:13px;color:var(--ink)}
+input[type=search]{width:220px}
+input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-offset:-1px;border-color:transparent}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn{padding:6px 13px;border:1px solid var(--rule);background:var(--card);color:var(--ink);
+  border-radius:8px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+.btn:hover{background:var(--sunk);border-color:var(--faint)}
+.btn.keep:hover{background:var(--keep);border-color:var(--keep);color:#fff}
+.btn.reject:hover{background:var(--reject);border-color:var(--reject);color:#fff}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+
+/* ── Article cards ──────────────────────────────────────────────────────── */
 .count{color:var(--muted);font-size:13px}
-article{border:1px solid var(--rule);border-radius:8px;padding:13px 15px;margin-bottom:10px;
-  background:#fff}
-article.kept{border-left:4px solid var(--keep)}
-article.rejected{border-left:4px solid var(--reject);opacity:.55}
-article h2{margin:0 0 5px;font-size:16px;line-height:1.35;font-weight:650}
-article h2 a{text-decoration:none}
-article h2 a:hover{text-decoration:underline}
-.meta{color:var(--muted);font-size:12px;margin-bottom:7px}
-.tag{background:var(--panel);border:1px solid var(--rule);border-radius:8px;
-  padding:1px 7px;font-size:11px;margin-right:4px;color:var(--ink-soft)}
-.summary{font-size:13.5px;color:var(--ink-soft);margin:7px 0;
-  background:var(--panel);border-left:3px solid var(--accent);padding:7px 11px;border-radius:0 5px 5px 0}
-.why{color:var(--muted);font-style:italic}
-.acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:9px}
-.acts form{display:inline}
-.pager{display:flex;gap:10px;align-items:center;margin:18px 0}
-footer{color:var(--faint);font-size:11.5px;padding:0 26px 30px}
+.list{margin:18px 0 0}
+.item{background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
+  padding:17px 19px;margin-bottom:11px;box-shadow:var(--shadow);
+  transition:box-shadow .15s,transform .15s}
+.item:hover{box-shadow:0 2px 4px rgba(46,27,63,.07),0 8px 22px rgba(46,27,63,.07)}
+.item.kept{border-left:4px solid var(--keep)}
+.item.rejected{border-left:4px solid var(--reject);opacity:.5}
+.item h2{margin:0 0 7px;font-family:Fraunces,Georgia,serif;font-size:19px;
+  font-weight:600;line-height:1.3;letter-spacing:-.2px}
+.item h2 a{text-decoration:none}
+.item h2 a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.meta{display:flex;flex-wrap:wrap;gap:9px;align-items:center;
+  color:var(--muted);font-size:12.5px;margin-bottom:9px}
+.meta .src{font-weight:600;color:var(--ink-2)}
+.meta .dot{color:var(--faint)}
+.pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.2px}
+.pill.kept{background:var(--keep-soft);color:var(--keep)}
+.pill.rejected{background:var(--reject-soft);color:var(--reject)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.tag{background:var(--panel);border-radius:6px;padding:2px 8px;
+  font-size:11.5px;color:var(--ink-2)}
+.summary{font-size:14.5px;line-height:1.6;color:var(--ink-2);margin:10px 0 0;
+  background:var(--panel);border-left:3px solid var(--accent-2);
+  padding:11px 14px;border-radius:0 8px 8px 0}
+.why{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--rule);
+  color:var(--muted);font-size:13.5px}
+.why b{color:var(--accent);font-weight:600}
+.acts{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:13px;
+  padding-top:12px;border-top:1px solid var(--rule)}
+.acts form{display:inline-flex;gap:7px}
+.acts select{font-size:12.5px;padding:5px 9px}
+
+/* ── Pager & footer ─────────────────────────────────────────────────────── */
+.pager{display:flex;gap:14px;align-items:center;justify-content:center;margin:26px 0 10px}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:15px}
+footer{color:var(--faint);font-size:11.5px;padding:24px 0 40px;text-align:center}
+footer a{color:var(--faint)}
+@media (max-width:640px){
+  .masthead h1{font-size:24px}
+  .item h2{font-size:17px}
+  input[type=search]{width:150px}
+  .tools{margin-left:0;width:100%}
+}
 </style></head><body>
-<header>
+<div class="masthead"><div class="wrap">
   <h1>Louise&#39;s AI News Tracker</h1>
-  <p>Governance, geopolitics, safety, research, deployment</p>
-</header>
+  <p class="tag">Governance · Geopolitics · Safety · Research · Technical · Deployment · Podcasts</p>
+</div></div>
 {% block nav %}{% endblock %}
-<main>{% block body %}{% endblock %}</main>
-<footer>build {{ build }} · {{ total_articles }} articles</footer>
+<div class="wrap">{% block body %}{% endblock %}</div>
+<footer><div class="wrap">build {{ build }} · {{ total_articles }} articles · <a href="/logout">sign out</a></div></footer>
 </body></html>
