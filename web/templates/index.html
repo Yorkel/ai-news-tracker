@@ -34,6 +34,7 @@
       <button class="btn" type="submit">Go</button>
     </form>
     <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}">↓ CSV</a>
+    <span class="tosort">{{ to_sort }} to sort</span>
   </div>
 </div>
 
@@ -58,6 +59,21 @@
         {% if a.summary_why %}<span class="why"><b>Why this matters:</b> {{ a.summary_why }}</span>{% endif %}
       </div>
     {% endif %}
+    {% if a.notes %}
+      <div class="notes">
+        {% for n in a.notes %}
+          <div class="note">
+            <span class="when">{{ n.created_at.strftime('%d %b %H:%M') }}</span>
+            {{ n.note }}
+            <form method="post" action="/note/delete" class="del">
+              <input type="hidden" name="note_id" value="{{ n.id }}">
+              <input type="hidden" name="back" value="{{ back }}">
+              <button class="x" title="Delete note">×</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
     <div class="acts">
       <form method="post" action="/act">
         <input type="hidden" name="url" value="{{ a.url }}">
@@ -68,6 +84,12 @@
         {% else %}
           <button class="btn" name="action" value="clear">↩ Undo</button>
         {% endif %}
+      </form>
+      <form method="post" action="/note" class="notef">
+        <input type="hidden" name="url" value="{{ a.url }}">
+        <input type="hidden" name="back" value="{{ back }}">
+        <input type="text" name="note" placeholder="Add a note…">
+        <button class="btn">Save</button>
       </form>
       <form method="post" action="/move">
         <input type="hidden" name="url" value="{{ a.url }}">

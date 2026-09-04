@@ -390,7 +390,11 @@ sources:
     type: rss
     scraper: src.scraping.rss_adapter
     params: {feed_url: "https://rss.arxiv.org/rss/cs.AI"}
-    disabled: false
+    disabled: true
+    # DISABLED 2026-09-04. 1,229 of 2,581 articles came from this one feed —
+    # 48% of the database, hundreds more each week, and raw ML preprints rather
+    # than news. cs.CY (Computers and Society) stays: it is the arXiv category
+    # that actually matches this tracker's beat.
 
   - name: arxiv_cs_lg
     type: rss

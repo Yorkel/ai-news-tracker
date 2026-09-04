@@ -28,7 +28,7 @@ from fastapi.templating import Jinja2Templates
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from dashboard import streams as S       # noqa: E402
-from dashboard.config import source_label  # noqa: E402
+from web.labels import display as source_display  # noqa: E402
 from web import auth                     # noqa: E402
 from web import data as D                # noqa: E402
 
@@ -78,11 +78,16 @@ def index(request: Request, stream: str = "all", place: str = "All",
     rows, total = D.fetch_articles(stream, place, wk, status, q, offset, PER_PAGE)
 
     for r in rows:
-        r["source_label"] = source_label(r["source"])
+        r["source_label"] = source_display(r["source"])
         r["stream_label"] = S.SHORT.get(r["stream"], r["stream"])
         r["article_date"] = r["article_date"].strftime("%d %b") if r["article_date"] else ""
         main, why = _split_summary(r.get("summary"))
         r["summary_main"], r["summary_why"] = main, why
+
+    notes = D.notes_for([r["url"] for r in rows])
+    for r in rows:
+        r["notes"] = notes.get(r["url"], [])
+    to_sort = D.pending_count(stream, place, wk)
 
     tabs = [("all", "All", counts.get("all", 0))] + [
         (s, S.SHORT[s], counts.get(s, 0)) for s in S.ORDER
@@ -97,7 +102,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
         "status": status, "q": q, "page": max(page, 1),
         "pages": max(1, -(-total // PER_PAGE)),
         "stream_tabs": tabs, "places": ["All"] + S.PLACE_ORDER,
-        "week_idx": week_idx,
+        "week_idx": week_idx, "to_sort": to_sort,
         "week_labels": [(i, w[2]) for i, w in enumerate(weeks)],
         "move_targets": [(s, S.SHORT[s]) for s in S.ORDER],
         "back": back,
@@ -176,3 +181,22 @@ def logout():
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(auth.COOKIE)
     return resp
+
+
+@app.post("/note")
+def note(request: Request, url: str = Form(...), note: str = Form(""),
+         back: str = Form("/")):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
+    D.add_note(url, note)
+    return RedirectResponse(back, status_code=303)
+
+
+@app.post("/note/delete")
+def note_delete(request: Request, note_id: str = Form(...), back: str = Form("/")):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
+    D.delete_note(note_id)
+    return RedirectResponse(back, status_code=303)

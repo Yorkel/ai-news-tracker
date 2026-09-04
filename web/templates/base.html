@@ -147,6 +147,19 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
 .acts select{font-size:12.5px;padding:5px 9px}
 
 /* ── Pager & footer ─────────────────────────────────────────────────────── */
+.tosort{font-size:12.5px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);padding:5px 11px;border-radius:8px;white-space:nowrap}
+.notes{margin-top:11px}
+.note{position:relative;background:var(--accent-soft);border-radius:8px;
+  padding:8px 30px 8px 12px;margin-bottom:5px;font-size:13.5px;color:var(--ink-2)}
+.note .when{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.note .del{position:absolute;top:5px;right:6px}
+.note .x{border:0;background:none;color:var(--faint);cursor:pointer;font-size:16px;
+  line-height:1;padding:2px 4px}
+.note .x:hover{color:var(--reject)}
+.notef{flex:1;min-width:190px}
+.notef input{flex:1;width:100%;padding:6px 10px;border:1px solid var(--rule);
+  border-radius:8px;font:inherit;font-size:13px;background:var(--card);color:var(--ink)}
 .pager{display:flex;gap:14px;align-items:center;justify-content:center;margin:26px 0 10px}
 .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:15px}
 footer{color:var(--faint);font-size:11.5px;padding:24px 0 40px;text-align:center}

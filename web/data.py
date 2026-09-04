@@ -136,3 +136,40 @@ def set_stream(url: str, stream: str) -> None:
 def kept_rows(week: tuple[date, date] | None, stream: str | None) -> list[dict]:
     rows, _ = fetch_articles(stream, None, week, "kept", "", 0, 10**6)
     return rows
+
+
+def pending_count(stream: str | None, place: str | None,
+                  week: tuple[date, date] | None) -> int:
+    """Articles in this view with no keep/reject yet — the size of the job."""
+    rows, _ = fetch_articles(stream, place, week, "pending", "", 0, 10**6)
+    return len(rows)
+
+
+def notes_for(urls: list[str]) -> dict[str, list[dict]]:
+    """Curator notes keyed by article url."""
+    if not urls:
+        return {}
+    with _conn() as c, c.cursor() as cur:
+        cur.execute(
+            """select url, note, created_at from article_notes
+                where url = any(%s) order by created_at desc""", (urls,))
+        rows = cur.fetchall()
+    out: dict[str, list[dict]] = {}
+    for r in rows:
+        out.setdefault(r["url"], []).append(r)
+    return out
+
+
+def add_note(url: str, note: str) -> None:
+    note = (note or "").strip()
+    if not note:
+        return
+    with _conn() as c, c.cursor() as cur:
+        cur.execute("insert into article_notes (url, note) values (%s, %s)", (url, note))
+        c.commit()
+
+
+def delete_note(note_id: str) -> None:
+    with _conn() as c, c.cursor() as cur:
+        cur.execute("delete from article_notes where id = %s", (note_id,))
+        c.commit()
