@@ -188,6 +188,22 @@ footer a{color:var(--faint)}
   input[type=search]{width:150px}
   .tools{margin-left:0;width:100%}
 }
+
+/* A sorted card leaves the list. It collapses rather than vanishing, so the
+   eye can follow where it went and the cards below do not jump. */
+.item{transition:opacity .18s ease,transform .18s ease}
+.item.going{opacity:0;transform:translateX(-14px)}
+.item.busy{opacity:.5;pointer-events:none}
+
+/* Because the card disappears, a misclick needs a way back. */
+#undobar{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(80px);
+  display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:10px;
+  background:var(--ink);color:#fff;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.22);
+  opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;z-index:50}
+#undobar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#undobar button{background:none;border:0;color:var(--accent-2);font:inherit;
+  font-weight:700;cursor:pointer;padding:0}
+#undobar button:hover{text-decoration:underline}
 </style></head><body>
 <div class="masthead"><div class="wrap">
   <h1>Louise&#39;s AI News Tracker</h1>
@@ -197,4 +213,156 @@ footer a{color:var(--faint)}
 {% block nav %}{% endblock %}
 <div class="wrap">{% block body %}{% endblock %}</div>
 <footer><div class="wrap">build {{ build }} · {{ total_articles }} articles · <a href="/logout">sign out</a></div></footer>
+<div id="undobar" role="status" aria-live="polite">
+  <span id="undotext"></span><button type="button" id="undobtn">Undo</button>
+</div>
+<script>
+(function () {
+  // Progressive enhancement: without this the forms post and redirect as
+  // before. With it, a decision is a background POST and the card is removed
+  // here, so the page never reloads and the scroll position is kept.
+  var bar = document.getElementById('undobar');
+  var text = document.getElementById('undotext');
+  var btn = document.getElementById('undobtn');
+  var timer = null, undo = null;
+
+  var counter = document.getElementById('tosort');
+  function bump(n) {
+    if (!counter) return;
+    counter.textContent = Math.max(0, (parseInt(counter.textContent, 10) || 0) + n);
+  }
+
+  function post(action, body) {
+    return fetch(action, {
+      method: 'POST',
+      headers: {'X-Requested-With': 'fetch',
+                'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams(body)
+    });
+  }
+
+  function toast(label, restore) {
+    undo = restore;
+    text.textContent = label;
+    bar.classList.add('show');
+    clearTimeout(timer);
+    timer = setTimeout(function () { bar.classList.remove('show'); undo = null; }, 9000);
+  }
+
+  btn.addEventListener('click', function () {
+    if (undo) undo();
+    bar.classList.remove('show');
+    undo = null;
+  });
+
+  function remove(item, label, url) {
+    // Keep the node and its position so Undo can put it back exactly.
+    var parent = item.parentNode, next = item.nextSibling;
+    item.classList.add('going');
+    setTimeout(function () { item.remove(); }, 180);
+    bump(-1);
+    toast(label, function () {
+      post('/act', {url: url, action: 'clear', back: location.href}).then(function () {
+        item.classList.remove('going');
+        parent.insertBefore(item, next);
+        bump(1);
+      });
+    });
+  }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    var item = form.closest('.item');
+    if (!item) return;
+    var url = item.dataset.url;
+    var action = form.getAttribute('action');
+
+    // Which button was used; the browser only tells us via the submitter.
+    var pressed = e.submitter && e.submitter.name === 'action'
+      ? e.submitter.value : null;
+
+    var body = {};
+    new FormData(form).forEach(function (v, k) { body[k] = v; });
+    body.back = location.href;
+    if (pressed) body.action = pressed;
+
+    if (action === '/act' && pressed) {
+      e.preventDefault();
+      if (pressed === 'clear') {
+        // Undo on a kept or rejected list: it is unsorted again, so it
+        // belongs back on the pending pile, not on this one.
+        post(action, body);
+        item.classList.add('going');
+        setTimeout(function () { item.remove(); }, 180);
+        bump(1);
+        return;
+      }
+      var words = {keep: 'Kept', reject: 'Rejected', later: 'Saved for later'};
+      post(action, body);
+      remove(item, words[pressed] || 'Sorted', url);
+      return;
+    }
+
+    if (action === '/move') {
+      if (!body.stream) { e.preventDefault(); return; }
+      e.preventDefault();
+      item.classList.add('busy');
+      post(action, body).then(function () {
+        // The category tabs filter the list, so a card moved out of the
+        // category you are looking at no longer belongs on screen.
+        var tab = document.querySelector('.tab.on');
+        var viewing = tab ? new URL(tab.href, location).searchParams.get('stream') : 'all';
+        item.classList.remove('busy');
+        if (viewing && viewing !== 'all' && viewing !== body.stream) {
+          item.classList.add('going');
+          setTimeout(function () { item.remove(); }, 180);
+        } else {
+          var kick = item.querySelector('.kicker');
+          var opt = form.querySelector('option[value="' + body.stream + '"]');
+          if (kick && opt) {
+            kick.textContent = opt.textContent.trim();
+            kick.className = 'kicker kick-' + body.stream;
+          }
+        }
+      });
+      return;
+    }
+
+    if (action === '/note') {
+      e.preventDefault();
+      var box = form.querySelector('textarea');
+      var written = (box.value || '').trim();
+      if (!written) return;
+      post(action, body);
+      box.value = '';
+
+      // Show it straight away rather than reloading, which is what threw the
+      // scroll position away in the first place.
+      var list = item.querySelector('.notes');
+      if (!list) {
+        list = document.createElement('div');
+        list.className = 'notes';
+        item.insertBefore(list, item.querySelector('.acts'));
+      }
+      var note = document.createElement('div');
+      note.className = 'note';
+      var when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = new Date().toLocaleDateString('en-GB',
+        {day: '2-digit', month: 'short'});
+      note.appendChild(when);
+      note.appendChild(document.createTextNode(' ' + written));
+      list.appendChild(note);
+      return;
+    }
+
+    if (action === '/note/delete') {
+      e.preventDefault();
+      post(action, body);
+      var n = form.closest('.note');
+      if (n) n.remove();
+    }
+  });
+})();
+</script>
 </body></html>

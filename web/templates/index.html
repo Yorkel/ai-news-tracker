@@ -36,7 +36,7 @@
       <button class="btn" type="submit">Go</button>
     </form>
     <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}">↓ CSV</a>
-    <span class="tosort">{{ to_sort }} to sort</span>
+    <span class="tosort"><b id="tosort">{{ to_sort }}</b> to sort</span>
   </div>
 </div>
 
@@ -44,7 +44,7 @@
 
 <div class="list">
 {% for a in articles %}
-  <div class="item {{ a.status|lower }}">
+  <div class="item {{ a.status|lower }}" data-url="{{ a.url }}">
     <span class="kicker kick-{{ a.stream }}">{{ a.stream_label }}</span>
     <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
     <div class="meta">
@@ -98,10 +98,13 @@
       <form method="post" action="/move">
         <input type="hidden" name="url" value="{{ a.url }}">
         <input type="hidden" name="back" value="{{ back }}">
-        <select name="stream" onchange="this.form.submit()">
+        <select name="stream" aria-label="Change category">
           <option value="">Change category…</option>
-          {% for s, lbl in move_targets %}<option value="{{ s }}">{{ lbl }}</option>{% endfor %}
+          {% for s, lbl in move_targets %}
+            <option value="{{ s }}" {{ 'selected' if s == a.stream else '' }}>{{ lbl }}</option>
+          {% endfor %}
         </select>
+        <button class="btn">Save</button>
       </form>
     </div>
   </div>

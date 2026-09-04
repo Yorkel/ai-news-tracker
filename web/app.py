@@ -22,7 +22,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import (HTMLResponse, RedirectResponse, Response,
+                               StreamingResponse)
 from fastapi.templating import Jinja2Templates
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -65,7 +66,10 @@ def _split_summary(text: str | None) -> tuple[str, str]:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, stream: str = "all", place: str = "All",
-          status: str = "all", week: int = 0, q: str = "", page: int = 1):
+          status: str = "pending", week: int = 0, q: str = "", page: int = 1):
+    # Default to the unsorted pile. Once something is kept or rejected it has
+    # been dealt with, so it leaves the list; ?status=kept still works if you
+    # want to look back at what you chose.
     blocked = auth.require(request)
     if blocked is not None:
         return blocked
@@ -109,6 +113,19 @@ def index(request: Request, stream: str = "all", place: str = "All",
     })
 
 
+def _done(request: Request, back: str):
+    """Answer an action.
+
+    The page submits these with fetch, and then removes the card itself, so
+    there is nothing to send back and no navigation: that is what keeps your
+    scroll position. Without JavaScript the same form posts normally and gets
+    the redirect, so the dashboard still works.
+    """
+    if request.headers.get("x-requested-with") == "fetch":
+        return Response(status_code=204)
+    return RedirectResponse(back, status_code=303)
+
+
 @app.post("/act")
 def act(request: Request, url: str = Form(...), action: str = Form(...),
         back: str = Form("/")):
@@ -119,7 +136,7 @@ def act(request: Request, url: str = Form(...), action: str = Form(...),
         D.clear_decision(url)
     else:
         D.set_decision(url, action)
-    return RedirectResponse(back, status_code=303)
+    return _done(request, back)
 
 
 @app.post("/move")
@@ -130,7 +147,7 @@ def move(request: Request, url: str = Form(...), stream: str = Form(""),
         return blocked
     if stream:
         D.set_stream(url, stream)
-    return RedirectResponse(back, status_code=303)
+    return _done(request, back)
 
 
 @app.get("/export.csv")
@@ -197,7 +214,7 @@ def note(request: Request, url: str = Form(...), note: str = Form(""),
     if blocked is not None:
         return blocked
     D.add_note(url, note)
-    return RedirectResponse(back, status_code=303)
+    return _done(request, back)
 
 
 @app.post("/note/delete")
@@ -206,4 +223,4 @@ def note_delete(request: Request, note_id: str = Form(...), back: str = Form("/"
     if blocked is not None:
         return blocked
     D.delete_note(note_id)
-    return RedirectResponse(back, status_code=303)
+    return _done(request, back)
