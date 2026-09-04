@@ -977,7 +977,7 @@ sources:
     params:
       feed_url: "https://www.businesspost.ie/news-sitemap.xml"
       apply_relevance_filter: true
-    disabled: false
+    disabled: true
     # Ireland's business paper. NO RSS: /feed/ and every other feed path return
     # the site's HTML shell, and /wp-json returns an empty array. Its Google
     # News sitemap carries 106 recent articles with title and date, so it is
@@ -988,6 +988,10 @@ sources:
     # nothing for a body match to read at filter time. A Business Post AI story
     # headlined purely in business terms will be missed.
     # ⚠️ Subscription site — expect truncated bodies after backfill.
+    #
+    # DISABLED 2026-09-04: it is behind a paywall, so the headline arrives but
+    # the article cannot be read or summarised. Its Google News sitemap route
+    # still works if that ever changes.
 
   - name: conspicuous_cognition
     type: rss
