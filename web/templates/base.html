@@ -97,6 +97,17 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
   color:var(--muted);font-size:12.5px;margin-bottom:9px}
 .meta .src{font-weight:600;color:var(--ink-2)}
 .meta .dot{color:var(--faint)}
+/* Category badge. Each category gets its own colour so the current one is
+   readable at a glance rather than being one grey crumb among several. */
+.cat{font-size:11.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+  padding:3px 9px;border-radius:6px;color:#fff}
+.cat-governance{background:#7B4FA8}
+.cat-geopolitics{background:#B92B54}
+.cat-safety{background:#2E8B6F}
+.cat-research{background:#4A63A8}
+.cat-technical{background:#DE9A2E}
+.cat-deployment{background:#C4622E}
+.cat-podcasts{background:#5C3D6E}
 .pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.2px}
 .pill.kept{background:var(--keep-soft);color:var(--keep)}
 .pill.rejected{background:var(--reject-soft);color:var(--reject)}
@@ -128,7 +139,7 @@ footer a{color:var(--faint)}
 </style></head><body>
 <div class="masthead"><div class="wrap">
   <h1>Louise&#39;s AI News Tracker</h1>
-  <p class="tag">Governance · Geopolitics · Safety · Research · Technical · Deployment · Podcasts</p>
+  <p class="tag">Seven categories · Governance, geopolitics, safety, research, technical, deployment, podcasts</p>
 </div></div>
 {% block nav %}{% endblock %}
 <div class="wrap">{% block body %}{% endblock %}</div>

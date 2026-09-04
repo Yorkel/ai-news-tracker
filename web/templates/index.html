@@ -48,9 +48,9 @@
   <div class="item {{ a.status|lower }}">
     <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
     <div class="meta">
+      <span class="cat cat-{{ a.stream }}">{{ a.stream_label }}</span>
       <span class="src">{{ a.source_label }}</span>
       <span class="dot">·</span><span>{{ a.article_date }}</span>
-      <span class="dot">·</span><span>{{ a.stream_label }}</span>
       <span class="dot">·</span><span>{{ a.place }}</span>
       {% if a.status != 'Pending' %}<span class="pill {{ a.status|lower }}">{{ a.status }}</span>{% endif %}
     </div>
@@ -77,7 +77,7 @@
         <input type="hidden" name="url" value="{{ a.url }}">
         <input type="hidden" name="back" value="{{ back }}">
         <select name="stream" onchange="this.form.submit()">
-          <option value="">Move to…</option>
+          <option value="">Change category…</option>
           {% for s, lbl in move_targets %}<option value="{{ s }}">{{ lbl }}</option>{% endfor %}
         </select>
       </form>

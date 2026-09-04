@@ -140,12 +140,12 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["stream", "place", "date", "source", "title", "url", "summary"])
+    w.writerow(["category", "place", "date", "source", "title", "url", "summary"])
     for r in rows:
         w.writerow([r["stream"], r["place"], r["article_date"], r["source"],
                     r["title"], r["url"], (r.get("summary") or "")])
     buf.seek(0)
-    name = f"reading-list_{stream}_{date.today():%Y-%m-%d}.csv"
+    name = f"reading-list_{stream}_{date.today():%Y-%m-%d}.csv"  # noqa: E501
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
