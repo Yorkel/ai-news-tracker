@@ -142,13 +142,20 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     week_idx = max(0, min(week, len(weeks) - 1))
     wk = (weeks[week_idx][0], weeks[week_idx][1])
     rows = D.kept_rows(wk, None if stream == "all" else stream)
+    notes = D.notes_for([r["url"] for r in rows])
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["category", "place", "date", "source", "title", "url", "summary"])
+    w.writerow(["category", "place", "published", "source", "title", "url",
+                "summary", "why_it_matters", "my_notes"])
     for r in rows:
-        w.writerow([r["stream"], r["place"], r["article_date"], r["source"],
-                    r["title"], r["url"], (r.get("summary") or "")])
+        summary, why = _split_summary(r.get("summary"))
+        # Several notes on one article are joined rather than spread across
+        # rows, so one article stays one line in the reading list.
+        mine = " | ".join(n["note"] for n in notes.get(r["url"], []))
+        w.writerow([r["stream"], r["place"], r["article_date"],
+                    source_display(r["source"]), r["title"], r["url"],
+                    summary, why, mine])
     buf.seek(0)
     name = f"reading-list_{stream}_{date.today():%Y-%m-%d}.csv"  # noqa: E501
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
