@@ -164,6 +164,57 @@ def newsletter_count(week: tuple[date, date] | None) -> int:
     return len(rows)
 
 
+# Words that hint at what an idea is, so the exported file groups itself.
+_IDEA_KINDS = (
+    ("source", ("source", "feed", "rss", "substack", "newsletter to", "add ",
+                "follow ", "subscribe", "http")),
+    ("bug", ("broken", "not working", "doesn't", "does not", "wrong", "bug",
+             "error", "missing", "duplicate")),
+)
+
+
+def _idea_kind(body: str) -> str:
+    low = body.lower()
+    for kind, words in _IDEA_KINDS:
+        if any(w in low for w in words):
+            return kind
+    return "thought"
+
+
+def add_idea(body: str) -> None:
+    """Record a thought, a source worth adding, or something that is broken."""
+    body = (body or "").strip()
+    if not body:
+        return
+    with _conn() as c, c.cursor() as cur:
+        cur.execute("insert into curator_ideas (body, kind) values (%s, %s)",
+                    (body, _idea_kind(body)))
+        c.commit()
+
+
+def open_ideas() -> list[dict]:
+    with _conn() as c, c.cursor() as cur:
+        return cur.execute(
+            """select id, created_at, body, kind from curator_ideas
+                where status = 'open' order by created_at desc""").fetchall()
+
+
+def idea_count() -> int:
+    with _conn() as c, c.cursor() as cur:
+        return cur.execute(
+            "select count(*) n from curator_ideas where status = 'open'"
+        ).fetchone()["n"]
+
+
+def close_ideas(ids: list) -> int:
+    with _conn() as c, c.cursor() as cur:
+        cur.execute("""update curator_ideas set status = 'reviewed',
+                          reviewed_at = now() where id = any(%s)""", (ids,))
+        n = cur.rowcount
+        c.commit()
+        return n
+
+
 def set_stream(url: str, stream: str) -> None:
     with _conn() as c, c.cursor() as cur:
         cur.execute(

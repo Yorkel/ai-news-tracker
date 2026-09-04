@@ -122,6 +122,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
         r["notes"] = notes.get(r["url"], [])
     to_sort = D.pending_count(stream, place, wk)
     for_friday = D.newsletter_count(wk)
+    ideas = D.idea_count()
 
     tabs = [("all", "All", counts.get("all", 0))] + [
         (s, S.SHORT[s], counts.get(s, 0)) for s in S.ORDER
@@ -137,7 +138,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
         "pages": max(1, -(-total // PER_PAGE)),
         "stream_tabs": tabs, "places": ["All"] + S.PLACE_ORDER,
         "week_idx": week_idx, "to_sort": to_sort,
-        "for_friday": for_friday,
+        "for_friday": for_friday, "ideas": ideas,
         "week_labels": ([(ALL_TIME, "All time")]
                         + [(i, w[2]) for i, w in enumerate(weeks)]),
         "move_targets": [(s, S.SHORT[s]) for s in S.ORDER],
@@ -172,6 +173,15 @@ def act(request: Request, url: str = Form(...), action: str = Form(...),
         D.set_newsletter(url, False)
     else:
         D.set_decision(url, action)
+    return _done(request, back)
+
+
+@app.post("/idea")
+def idea(request: Request, body: str = Form(""), back: str = Form("/")):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
+    D.add_idea(body)
     return _done(request, back)
 
 
