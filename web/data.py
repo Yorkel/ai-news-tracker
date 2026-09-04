@@ -100,8 +100,15 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
     return rows[offset:offset + limit], len(rows)
 
 
-def stream_counts(week: tuple[date, date] | None) -> dict[str, int]:
-    rows, _ = fetch_articles(None, None, week, "all", "", 0, 10**6)
+def stream_counts(week: tuple[date, date] | None,
+                  status: str = "all") -> dict[str, int]:
+    """Per-category counts for the week, on the same footing as the list.
+
+    The status is passed through so a tab's number is the number of cards
+    that tab actually shows. With the default pending view that means the
+    count is the size of the job left, and it drops as you sort.
+    """
+    rows, _ = fetch_articles(None, None, week, status, "", 0, 10**6)
     out = {s: 0 for s in S.ORDER}
     for r in rows:
         out[r["stream"]] = out.get(r["stream"], 0) + 1

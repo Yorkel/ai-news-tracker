@@ -51,6 +51,16 @@ a{color:inherit}
 .tabs .row{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;
   padding:9px 0 0;margin-bottom:-1px}
 .tabs .row::-webkit-scrollbar{display:none}
+/* The row scrolls, but the scrollbar is hidden, so without these the tabs
+   past the fold are simply unreachable. */
+.tabs .wrap{position:relative}
+.tabnav{position:absolute;top:9px;bottom:0;width:34px;z-index:2;cursor:pointer;
+  border:0;padding:0;font:400 22px/1 system-ui;color:var(--ink);
+  display:flex;align-items:center;justify-content:center}
+.tabnav[hidden]{display:none}
+.tabnav.prev{left:0;background:linear-gradient(90deg,var(--paper) 62%,transparent)}
+.tabnav.next{right:0;background:linear-gradient(270deg,var(--paper) 62%,transparent)}
+.tabnav:hover{color:var(--accent)}
 .tab{display:flex;align-items:center;gap:7px;padding:9px 15px 8px;
   text-decoration:none;font-size:13.5px;font-weight:500;color:var(--muted);
   white-space:nowrap;background:var(--panel);
@@ -223,6 +233,30 @@ footer a{color:var(--faint)}
   var text = document.getElementById('undotext');
   var btn = document.getElementById('undobtn');
   var timer = null, undo = null;
+
+  // Category tabs: arrows, shown only when there is something off-screen.
+  var row = document.querySelector('.tabs .row');
+  var prev = document.querySelector('.tabnav.prev');
+  var next = document.querySelector('.tabnav.next');
+  if (row && prev && next) {
+    var refresh = function () {
+      var over = row.scrollWidth - row.clientWidth;
+      prev.hidden = row.scrollLeft <= 2;
+      next.hidden = over <= 2 || row.scrollLeft >= over - 2;
+    };
+    var nudge = function (dir) {
+      row.scrollBy({left: dir * Math.max(160, row.clientWidth * 0.6),
+                    behavior: 'smooth'});
+    };
+    prev.addEventListener('click', function () { nudge(-1); });
+    next.addEventListener('click', function () { nudge(1); });
+    row.addEventListener('scroll', refresh, {passive: true});
+    window.addEventListener('resize', refresh);
+    // Open on a later tab and it should already be in view.
+    var on = row.querySelector('.tab.on');
+    if (on) on.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    refresh();
+  }
 
   var counter = document.getElementById('tosort');
   function bump(n) {

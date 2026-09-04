@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block nav %}
-<nav class="tabs" aria-label="Categories"><div class="wrap"><div class="row">
+<nav class="tabs" aria-label="Categories"><div class="wrap">
+  <button type="button" class="tabnav prev" aria-label="Scroll categories left" hidden>&#8249;</button>
+  <button type="button" class="tabnav next" aria-label="Scroll categories right" hidden>&#8250;</button>
+  <div class="row">
   {% for s, label, n in stream_tabs %}
     <a class="tab {{ 'on' if s == stream else '' }}"
        aria-current="{{ 'page' if s == stream else 'false' }}"

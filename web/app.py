@@ -77,7 +77,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
     week_idx = max(0, min(week, len(weeks) - 1))
     wk = (weeks[week_idx][0], weeks[week_idx][1])
 
-    counts = D.stream_counts(wk)
+    counts = D.stream_counts(wk, status)
     offset = (max(page, 1) - 1) * PER_PAGE
     rows, total = D.fetch_articles(stream, place, wk, status, q, offset, PER_PAGE)
 
