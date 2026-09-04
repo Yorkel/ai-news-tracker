@@ -41,18 +41,26 @@ a{color:inherit}
   font-size:30px;letter-spacing:-.4px;color:var(--dusk-ink);line-height:1.1}
 .masthead .tag{margin:5px 0 0;font-size:13.5px;color:var(--dusk-muted);letter-spacing:.1px}
 
-/* ── Stream tabs ────────────────────────────────────────────────────────── */
+/* ── Category tabs ──────────────────────────────────────────────────────
+   Drawn as real tabs: each sits in its own bordered shape with rounded top
+   corners, and the active one drops its bottom border so it reads as joined
+   to the content beneath rather than as a link that happens to be underlined. */
 .tabs{position:sticky;top:0;z-index:20;background:var(--paper);
-  border-bottom:1px solid var(--rule);box-shadow:0 1px 0 rgba(46,27,63,.03)}
-.tabs .row{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding:0}
+  border-bottom:1px solid var(--rule)}
+.tabs .row{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;
+  padding:9px 0 0;margin-bottom:-1px}
 .tabs .row::-webkit-scrollbar{display:none}
-.tab{padding:13px 15px;text-decoration:none;font-size:14px;font-weight:500;
-  color:var(--muted);white-space:nowrap;border-bottom:2.5px solid transparent;
-  transition:color .12s,border-color .12s}
-.tab:hover{color:var(--ink)}
-.tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
-.tab .n{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:600;
-  background:var(--panel);color:var(--muted);border-radius:9px;padding:1px 7px}
+.tab{display:flex;align-items:center;gap:7px;padding:9px 15px 8px;
+  text-decoration:none;font-size:13.5px;font-weight:500;color:var(--muted);
+  white-space:nowrap;background:var(--panel);
+  border:1px solid var(--rule);border-bottom-color:var(--rule);
+  border-radius:9px 9px 0 0;transition:background .12s,color .12s}
+.tab:hover{background:var(--sunk);color:var(--ink)}
+.tab.on{background:var(--card);color:var(--ink);font-weight:600;
+  border-bottom-color:var(--card);
+  box-shadow:inset 0 3px 0 var(--accent)}
+.tab .n{font-size:11px;font-weight:600;background:var(--sunk);color:var(--muted);
+  border-radius:9px;padding:1px 7px;line-height:1.5}
 .tab.on .n{background:var(--accent);color:#fff}
 
 /* ── Filter row ─────────────────────────────────────────────────────────── */
@@ -83,6 +91,7 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
 /* ── Article cards ──────────────────────────────────────────────────────── */
 .count{color:var(--muted);font-size:13px}
 .list{margin:18px 0 0}
+.filters{border-bottom:1px solid var(--rule)}
 .item{background:var(--card);border:1px solid var(--rule);border-radius:var(--radius);
   padding:17px 19px;margin-bottom:11px;box-shadow:var(--shadow);
   transition:box-shadow .15s,transform .15s}
