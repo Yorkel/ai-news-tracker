@@ -29,6 +29,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from dashboard import streams as S       # noqa: E402
 from dashboard.config import source_label  # noqa: E402
+from web import auth                     # noqa: E402
 from web import data as D                # noqa: E402
 
 BASE = Path(__file__).resolve().parent
@@ -65,6 +66,9 @@ def _split_summary(text: str | None) -> tuple[str, str]:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, stream: str = "all", place: str = "All",
           status: str = "pending", week: int = 0, q: str = "", page: int = 1):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
     weeks = D.week_options()
     week_idx = max(0, min(week, len(weeks) - 1))
     wk = (weeks[week_idx][0], weeks[week_idx][1])
@@ -101,7 +105,11 @@ def index(request: Request, stream: str = "all", place: str = "All",
 
 
 @app.post("/act")
-def act(url: str = Form(...), action: str = Form(...), back: str = Form("/")):
+def act(request: Request, url: str = Form(...), action: str = Form(...),
+        back: str = Form("/")):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
     if action == "clear":
         D.clear_decision(url)
     else:
@@ -110,14 +118,21 @@ def act(url: str = Form(...), action: str = Form(...), back: str = Form("/")):
 
 
 @app.post("/move")
-def move(url: str = Form(...), stream: str = Form(""), back: str = Form("/")):
+def move(request: Request, url: str = Form(...), stream: str = Form(""),
+         back: str = Form("/")):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
     if stream:
         D.set_stream(url, stream)
     return RedirectResponse(back, status_code=303)
 
 
 @app.get("/export.csv")
-def export_csv(stream: str = "all", week: int = 0):
+def export_csv(request: Request, stream: str = "all", week: int = 0):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
     weeks = D.week_options()
     week_idx = max(0, min(week, len(weeks) - 1))
     wk = (weeks[week_idx][0], weeks[week_idx][1])
@@ -138,3 +153,26 @@ def export_csv(stream: str = "all", week: int = 0):
 @app.get("/healthz")
 def healthz():
     return {"ok": True, "build": BUILD}
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_form(request: Request):
+    if auth.is_signed_in(request):
+        return RedirectResponse("/", status_code=303)
+    return auth.login_page()
+
+
+@app.post("/login")
+def login_submit(password: str = Form("")):
+    if not auth.check(password):
+        return auth.login_page("Wrong password." if password else "Enter the password.")
+    resp = RedirectResponse("/", status_code=303)
+    auth.issue_cookie(resp)
+    return resp
+
+
+@app.get("/logout")
+def logout():
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie(auth.COOKIE)
+    return resp

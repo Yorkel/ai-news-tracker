@@ -1,0 +1,40 @@
+# Render blueprint for the FastAPI dashboard (web/).
+#
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repo. Render reads
+# this file and creates the service. Then set the two secrets below in the
+# service's Environment tab; they are marked sync:false so they are never
+# stored in the repo.
+#
+# The old blueprint here described the classifier API from the template, which
+# this project does not run.
+
+services:
+  - type: web
+    name: ai-news-tracker
+    runtime: python
+    plan: free
+    region: frankfurt          # closest Render region to the Neon London database
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    # Render supplies $PORT; binding to 0.0.0.0 is required or the health
+    # check cannot reach the app.
+    startCommand: uvicorn web.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      # Neon connection string. Same database the local app and the scheduled
+      # scrape use.
+      - key: DATABASE_URL
+        sync: false
+      # Without this the app refuses every request rather than opening up.
+      - key: CURATOR_PASSWORD
+        sync: false
+      # Optional: only needed if you want summaries generated from the web app.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ENRICH_PROVIDER
+        value: openai
+      - key: OPENAI_SUMMARY_MODEL
+        value: gpt-4.1-mini
+      - key: PYTHON_VERSION
+        value: "3.12"
