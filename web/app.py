@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import subprocess
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, Request
@@ -63,6 +65,21 @@ def _build() -> str:
 BUILD = _build()
 
 
+def _spotify_search(show: str, title: str) -> str:
+    """A Spotify search for one episode.
+
+    The feeds point at whoever hosts the audio — acast, buzzsprout,
+    transistor, art19 — never at Spotify, so there is no episode link to
+    reuse. A search on the show plus the episode title lands on the episode
+    without needing API credentials, and degrades to the show page rather
+    than to nothing when the title does not match exactly.
+    """
+    # Leading episode numbers ("344 Data Vampires", "#255 - Gemini") are
+    # numbering from the host, and only ever hurt the match.
+    clean = re.sub(r"^[#\d]+[\s.\-–—:]+", "", (title or "").strip())
+    return "https://open.spotify.com/search/" + quote(f"{show} {clean}"[:180])
+
+
 def _split_summary(text: str | None) -> tuple[str, str]:
     """Separate the factual summary from the 'Why this matters' paragraph."""
     t = (text or "").strip()
@@ -97,6 +114,8 @@ def index(request: Request, stream: str = "all", place: str = "All",
         r["article_date"] = r["article_date"].strftime("%d %b") if r["article_date"] else ""
         main, why = _split_summary(r.get("summary"))
         r["summary_main"], r["summary_why"] = main, why
+        r["spotify"] = (_spotify_search(r["source_label"], r["title"])
+                        if r["stream"] == "podcasts" else "")
 
     notes = D.notes_for([r["url"] for r in rows])
     for r in rows:

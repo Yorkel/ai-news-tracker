@@ -52,6 +52,10 @@
     <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
     <div class="meta">
       <span class="src">{{ a.source_label }}</span>
+      {% if a.spotify %}
+        <span class="dot">·</span>
+        <a class="spot" href="{{ a.spotify }}" target="_blank" rel="noopener">Listen on Spotify</a>
+      {% endif %}
       <span class="dot">·</span><span>{{ a.article_date }}</span>
       <span class="dot">·</span><span>{{ a.place }}</span>
       {% if a.status != 'Pending' %}<span class="pill {{ a.status|lower }}">{{ a.status }}</span>{% endif %}
