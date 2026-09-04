@@ -234,6 +234,15 @@ footer a{color:var(--faint)}
   var btn = document.getElementById('undobtn');
   var timer = null, undo = null;
 
+  // Changing the week goes straight there. This is safe to auto-submit in a
+  // way the category dropdown was not: picking a week only changes what you
+  // are looking at, where picking a category rewrote an article. The Go
+  // button stays for anyone without JavaScript.
+  var weekSel = document.querySelector('select[name="week"]');
+  if (weekSel) {
+    weekSel.addEventListener('change', function () { weekSel.form.submit(); });
+  }
+
   // Category tabs: arrows, shown only when there is something off-screen.
   var row = document.querySelector('.tabs .row');
   var prev = document.querySelector('.tabnav.prev');
