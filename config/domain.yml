@@ -111,7 +111,6 @@ streams:
       - google_news_ireland
       - google_news_eu
       - bbc_tech
-      - nyt_tech
       - ft_tech
       - four_zero_four_media
       - the_markup
@@ -368,7 +367,6 @@ places:
     - zdnet_ai
     - venturebeat_ai
     - ai_business
-    - nyt_tech
     - politico_tech
     - science_news
     - four_zero_four_media
@@ -636,7 +634,6 @@ relevance:
     - venturebeat.com
     - aibusiness.com
     - bbc.co.uk
-    - nytimes.com
     - ft.com
     - politico.com
     - nature.com

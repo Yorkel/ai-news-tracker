@@ -847,15 +847,6 @@ sources:
       apply_relevance_filter: true
     disabled: false
 
-  - name: nyt_tech
-    type: rss
-    scraper: src.scraping.rss_adapter
-    params:
-      feed_url: "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
-      apply_relevance_filter: true
-    disabled: false
-    # ⚠️ Hard paywall — headline and standfirst only.
-
   - name: ft_tech
     type: rss
     scraper: src.scraping.rss_adapter

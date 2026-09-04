@@ -2,7 +2,7 @@
 web/labels.py — display names for sources.
 
 The dashboard used to title-case the config key, which produced "Four Zero
-Four Media", "Nyt Tech" and "Google News Ni". Publication names are not
+Four Media" and "Google News Ni". Publication names are not
 derivable from a slug, so they are listed.
 
 Anything not listed falls back to the old title-cased key, so a newly added
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 DISPLAY = {
     # Mainstream press
-    "four_zero_four_media": "404 Media", "nyt_tech": "New York Times",
+    "four_zero_four_media": "404 Media",
     "ft_tech": "Financial Times", "bbc_tech": "BBC", "guardian_ai": "The Guardian",
     "politico_tech": "Politico", "the_markup": "The Markup",
     "rest_of_world": "Rest of World", "mit_tech_review_ai": "MIT Technology Review",
