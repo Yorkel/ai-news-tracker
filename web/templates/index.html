@@ -1,20 +1,22 @@
 {% extends "base.html" %}
 {% block nav %}
-<div class="tabs"><div class="wrap"><div class="row">
+<nav class="tabs" aria-label="Categories"><div class="wrap"><div class="row">
   {% for s, label, n in stream_tabs %}
     <a class="tab {{ 'on' if s == stream else '' }}"
+       aria-current="{{ 'page' if s == stream else 'false' }}"
        href="?stream={{ s }}&week={{ week_idx }}&status={{ status }}&place={{ place }}">
       {{ label }}<span class="n">{{ n }}</span></a>
   {% endfor %}
-</div></div></div>
+</div></div></nav>
 {% endblock %}
 
 {% block body %}
 <div class="cols">
-<aside class="rail">
+<aside class="rail" aria-label="Places">
   <h3>Place</h3>
   {% for p in places %}
     <a class="{{ 'on' if p == place else '' }}"
+       aria-current="{{ 'page' if p == place else 'false' }}"
        href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}">{{ p }}</a>
   {% endfor %}
 </aside>
@@ -43,9 +45,9 @@
 <div class="list">
 {% for a in articles %}
   <div class="item {{ a.status|lower }}">
+    <span class="kicker kick-{{ a.stream }}">{{ a.stream_label }}</span>
     <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
     <div class="meta">
-      <span class="cat cat-{{ a.stream }}">{{ a.stream_label }}</span>
       <span class="src">{{ a.source_label }}</span>
       <span class="dot">·</span><span>{{ a.article_date }}</span>
       <span class="dot">·</span><span>{{ a.place }}</span>
@@ -55,9 +57,10 @@
       <div class="tags">{% for t in a.topic_tags %}<span class="tag">{{ t }}</span>{% endfor %}</div>
     {% endif %}
     {% if a.summary_main %}
-      <div class="summary">{{ a.summary_main }}
-        {% if a.summary_why %}<span class="why"><b>Why this matters:</b> {{ a.summary_why }}</span>{% endif %}
-      </div>
+      <div class="summary">{{ a.summary_main }}</div>
+      {% if a.summary_why %}
+        <div class="matters"><b>Why this matters</b><p>{{ a.summary_why }}</p></div>
+      {% endif %}
     {% endif %}
     {% if a.notes %}
       <div class="notes">
@@ -81,6 +84,7 @@
         {% if a.status == 'Pending' %}
           <button class="btn keep" name="action" value="keep">✓ Keep</button>
           <button class="btn reject" name="action" value="reject">✕ Reject</button>
+          <button class="btn later" name="action" value="later">☆ Save for later</button>
         {% else %}
           <button class="btn" name="action" value="clear">↩ Undo</button>
         {% endif %}
@@ -88,7 +92,7 @@
       <form method="post" action="/note" class="notef">
         <input type="hidden" name="url" value="{{ a.url }}">
         <input type="hidden" name="back" value="{{ back }}">
-        <input type="text" name="note" placeholder="Add a note…">
+        <textarea name="note" rows="1" placeholder="What do you want to remember about this one?"></textarea>
         <button class="btn">Save</button>
       </form>
       <form method="post" action="/move">

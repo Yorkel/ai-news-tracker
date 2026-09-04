@@ -85,7 +85,8 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
         r["place"] = S.assign_place(r["source"])
         act = r.get("action")
         r["status"] = ("Kept" if act in KEPT_ACTIONS
-                       else "Rejected" if act == "reject" else "Pending")
+                       else "Rejected" if act == "reject"
+                       else "Later" if act == "later" else "Pending")
 
     if stream and stream != "all":
         rows = [r for r in rows if r["stream"] == stream]

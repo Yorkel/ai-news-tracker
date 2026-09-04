@@ -1,7 +1,8 @@
 # Render blueprint for the FastAPI dashboard (web/).
 #
 # Deploy: Render dashboard -> New -> Blueprint -> pick this repo. Render reads
-# this file and creates the service. Then set the two secrets below in the
+# this file and creates the service. Then set the login details and the
+# database URL in the
 # service's Environment tab; they are marked sync:false so they are never
 # stored in the repo.
 #
@@ -26,8 +27,9 @@ services:
       # scrape use.
       - key: DATABASE_URL
         sync: false
-      # Without this the app refuses every request rather than opening up.
-      - key: CURATOR_PASSWORD
+      # The login password. Without this the app refuses every request
+      # rather than opening up.
+      - key: LOGIN_PASSWORD
         sync: false
       # Optional: only needed if you want summaries generated from the web app.
       - key: OPENAI_API_KEY

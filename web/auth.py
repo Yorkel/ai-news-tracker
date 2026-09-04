@@ -3,9 +3,9 @@ web/auth.py — password gate for the FastAPI dashboard.
 
 The Render URL is public, and every action (keep, reject, move) writes to the
 database, so the app cannot be left open. This is a signed-cookie session:
-one password, set as CURATOR_PASSWORD in the environment.
+one password, set as LOGIN_PASSWORD in the environment.
 
-Fails CLOSED. With no CURATOR_PASSWORD set the app refuses every request
+Fails CLOSED. With no LOGIN_PASSWORD set the app refuses every request
 rather than defaulting to open, because a public URL is the wrong place to
 guess in the permissive direction.
 
@@ -27,7 +27,9 @@ _MAX_AGE = 60 * 60 * 24 * 30  # 30 days
 
 
 def _password() -> str | None:
-    v = os.environ.get("CURATOR_PASSWORD")
+    # CURATOR_PASSWORD is the old name, still read so an already-deployed
+    # service keeps working if it was set before the rename.
+    v = os.environ.get("LOGIN_PASSWORD") or os.environ.get("CURATOR_PASSWORD")
     return v if v else None
 
 
@@ -104,6 +106,6 @@ def require(request: Request):
         return None
     if _password() is None:
         return HTMLResponse(
-            "<p style='font:15px sans-serif;padding:40px'>No CURATOR_PASSWORD is "
-            "configured, so this dashboard cannot be unlocked.</p>", status_code=503)
+            "<p style='font:15px sans-serif;padding:40px'>No login details are "
+            "set up yet, so this dashboard cannot be unlocked.</p>", status_code=503)
     return RedirectResponse("/login", status_code=303)
