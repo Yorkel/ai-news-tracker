@@ -79,7 +79,7 @@ DISPLAY = {
     "eighty_thousand_hours": "80,000 Hours", "axrp": "AXRP",
     "redwood_podcast": "Redwood Research (audio)", "dwarkesh": "Dwarkesh Podcast",
     "cognitive_revolution": "Cognitive Revolution", "mlst": "Machine Learning Street Talk",
-    "robert_miles": "Robert Miles", "chinatalk": "ChinaTalk", "lawfare": "Lawfare",
+    "robert_miles": "Robert Miles", "lawfare": "Lawfare",
     "hard_fork": "Hard Fork", "latent_space": "Latent Space",
     "practical_ai": "Practical AI", "gradient_dissent": "Gradient Dissent",
     "mystery_ai_hype": "Mystery AI Hype Theater 3000",

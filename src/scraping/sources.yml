@@ -718,21 +718,6 @@ sources:
     # ID. Found and verified. ⚠️ Required removing youtube.com from
     # relevance.blocked_domains — see the note there.
 
-  - name: chinatalk
-    type: rss
-    scraper: src.scraping.rss_adapter
-    params: {feed_url: "https://www.chinatalk.media/feed"}
-    disabled: true
-    # DISABLED 2026-09-04 at the curator's request. 25 articles collected.
-    # The feed and the domain notes below are kept so it can be switched back
-    # on with one flag if that changes.
-    # The dedicated China/compute source the geopolitics lane lacked.
-    # ⚠️ NOT the Apple/Megaphone audio feed (feeds.megaphone.fm/CHTAL4990341033):
-    # that carries no <link>, so the enclosure fallback resolved every episode
-    # to a raw traffic.megaphone.fm .mp3 — unreadable, and all 10 were dropped
-    # by the domain gate. The Substack feed gives real chinatalk.media pages
-    # AND the written newsletter, which is the more useful half.
-
   - name: lawfare
     type: rss
     scraper: src.scraping.rss_adapter
