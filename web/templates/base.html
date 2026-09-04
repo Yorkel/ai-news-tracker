@@ -111,9 +111,6 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
 .item:hover{box-shadow:0 2px 4px rgba(46,27,63,.07),0 8px 22px rgba(46,27,63,.07)}
 .item.kept{border-left:4px solid var(--keep)}
 .item.rejected{border-left:4px solid var(--reject);opacity:.5}
-.item.later{border-left:4px solid var(--gold)}
-.pill.later{background:#FBF0DC;color:#9A6B18}
-.btn.later:hover{background:var(--gold);border-color:var(--gold);color:#fff}
 .item h2{margin:0 0 7px;font-family:Fraunces,Georgia,serif;font-size:19px;
   font-weight:600;line-height:1.3;letter-spacing:-.2px}
 .item h2 a{text-decoration:none}
@@ -297,7 +294,7 @@ footer a{color:var(--faint)}
         bump(1);
         return;
       }
-      var words = {keep: 'Kept', reject: 'Rejected', later: 'Saved for later'};
+      var words = {keep: 'Kept', reject: 'Rejected'};
       post(action, body);
       remove(item, words[pressed] || 'Sorted', url);
       return;
