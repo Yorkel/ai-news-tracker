@@ -23,7 +23,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from itsdangerous import BadSignature, URLSafeSerializer
 
 COOKIE = "tracker_session"
-_MAX_AGE = 60 * 60 * 24 * 30  # 30 days
+# A year. This is a single-user dashboard on one laptop, and being logged out
+# every month is friction with no security gain: the cookie is signed with the
+# password, so changing the password still revokes every session immediately.
+_MAX_AGE = 60 * 60 * 24 * 365
 
 
 def _password() -> str | None:
@@ -87,7 +90,10 @@ button{width:100%;margin-top:9px;padding:9px;border:0;border-radius:6px;backgrou
 <h1>Louise&#39;s AI News Tracker</h1>
 <p>Governance, geopolitics, safety, research, deployment</p>
 <form method="post" action="/login">
-<input type="password" name="password" placeholder="Password" autofocus>
+<input type="text" name="username" value="louise" autocomplete="username"
+ hidden readonly aria-hidden="true" tabindex="-1">
+<input type="password" name="password" placeholder="Password" autofocus
+ autocomplete="current-password" id="password">
 <button type="submit">Enter</button>
 </form>
 __ERROR__
