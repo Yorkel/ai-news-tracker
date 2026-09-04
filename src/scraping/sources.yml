@@ -722,7 +722,10 @@ sources:
     type: rss
     scraper: src.scraping.rss_adapter
     params: {feed_url: "https://www.chinatalk.media/feed"}
-    disabled: false
+    disabled: true
+    # DISABLED 2026-09-04 at the curator's request. 25 articles collected.
+    # The feed and the domain notes below are kept so it can be switched back
+    # on with one flag if that changes.
     # The dedicated China/compute source the geopolitics lane lacked.
     # ⚠️ NOT the Apple/Megaphone audio feed (feeds.megaphone.fm/CHTAL4990341033):
     # that carries no <link>, so the enclosure fallback resolved every episode

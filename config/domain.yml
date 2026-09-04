@@ -260,7 +260,6 @@ streams:
       - cognitive_revolution
       - mlst
       - robert_miles
-      - chinatalk
       - lawfare
       - hard_fork
       - latent_space
@@ -382,7 +381,6 @@ places:
     - axrp
     - blood_in_the_machine
     - cais_safety_newsletter
-    - chinatalk
     - cognitive_revolution
     - council_strategic_risks
     - cset
@@ -618,7 +616,6 @@ relevance:
     - cognitiverevolution.ai
     - podcasters.spotify.com
     - youtube.com
-    - chinatalk.media
     # Google News search feeds resolve only to this redirect host — see the
     # note on the google_news_* sources in src/scraping/sources.yml.
     - news.google.com
