@@ -10,21 +10,17 @@
 {% endblock %}
 
 {% block body %}
+<div class="cols">
+<aside class="rail">
+  <h3>Place</h3>
+  {% for p in places %}
+    <a class="{{ 'on' if p == place else '' }}"
+       href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}">{{ p }}</a>
+  {% endfor %}
+</aside>
+<div>
 <div class="filters">
-  <div class="chips">
-    {% for p in places %}
-      <a class="chip {{ 'on' if p == place else '' }}"
-         href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}">{{ p }}</a>
-    {% endfor %}
-  </div>
-  <div class="sep"></div>
-  <div class="chips">
-    {% for st_, lbl in [('pending','Pending'),('kept','Kept'),('rejected','Rejected'),('all','All')] %}
-      <a class="chip {{ 'on' if st_ == status else '' }}"
-         href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ st_ }}">{{ lbl }}</a>
-    {% endfor %}
-  </div>
-  <div class="tools">
+  <div class="tools" style="margin-left:0">
     <form method="get" style="display:flex;gap:7px">
       <input type="hidden" name="stream" value="{{ stream }}">
       <input type="hidden" name="place" value="{{ place }}">
@@ -95,4 +91,5 @@
   {% if page < pages %}<a class="btn" href="?stream={{ stream }}&week={{ week_idx }}&place={{ place }}&status={{ status }}&q={{ q }}&page={{ page + 1 }}">Next →</a>{% endif %}
 </div>
 {% endif %}
+</div></div>
 {% endblock %}

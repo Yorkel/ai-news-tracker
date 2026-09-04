@@ -65,7 +65,7 @@ def _split_summary(text: str | None) -> tuple[str, str]:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, stream: str = "all", place: str = "All",
-          status: str = "pending", week: int = 0, q: str = "", page: int = 1):
+          status: str = "all", week: int = 0, q: str = "", page: int = 1):
     blocked = auth.require(request)
     if blocked is not None:
         return blocked
