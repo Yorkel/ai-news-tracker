@@ -39,6 +39,17 @@ templates = Jinja2Templates(directory=str(BASE / "templates"))
 
 PER_PAGE = 25
 
+# Sentinel week meaning "do not filter by date at all".
+ALL_TIME = -1
+
+
+def _week_range(weeks: list, week: int):
+    """Return (index, date range) for a requested week. None range = all time."""
+    if week == ALL_TIME:
+        return ALL_TIME, None
+    idx = max(0, min(week, len(weeks) - 1))
+    return idx, (weeks[idx][0], weeks[idx][1])
+
 
 def _build() -> str:
     try:
@@ -74,8 +85,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
     if blocked is not None:
         return blocked
     weeks = D.week_options()
-    week_idx = max(0, min(week, len(weeks) - 1))
-    wk = (weeks[week_idx][0], weeks[week_idx][1])
+    week_idx, wk = _week_range(weeks, week)
 
     counts = D.stream_counts(wk, status)
     offset = (max(page, 1) - 1) * PER_PAGE
@@ -107,7 +117,8 @@ def index(request: Request, stream: str = "all", place: str = "All",
         "pages": max(1, -(-total // PER_PAGE)),
         "stream_tabs": tabs, "places": ["All"] + S.PLACE_ORDER,
         "week_idx": week_idx, "to_sort": to_sort,
-        "week_labels": [(i, w[2]) for i, w in enumerate(weeks)],
+        "week_labels": ([(ALL_TIME, "All time")]
+                        + [(i, w[2]) for i, w in enumerate(weeks)]),
         "move_targets": [(s, S.SHORT[s]) for s in S.ORDER],
         "back": back,
     })
@@ -156,8 +167,7 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     if blocked is not None:
         return blocked
     weeks = D.week_options()
-    week_idx = max(0, min(week, len(weeks) - 1))
-    wk = (weeks[week_idx][0], weeks[week_idx][1])
+    _, wk = _week_range(weeks, week)
     # "all" is passed through rather than converted to None, so the export
     # holds exactly what the All tab holds — papers excluded.
     rows = D.kept_rows(wk, stream)
@@ -179,7 +189,8 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     # The papers pile is a separate reading list, so it gets a separate name
     # rather than a file that looks like the news export.
     stem = "papers" if stream == "papers" else f"reading-list_{stream}"
-    name = f"{stem}_{date.today():%Y-%m-%d}.csv"
+    span = "all-time" if wk is None else f"{wk[0]:%Y-%m-%d}"
+    name = f"{stem}_{span}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
