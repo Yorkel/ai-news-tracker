@@ -38,8 +38,11 @@
       <input type="search" name="q" value="{{ q }}" placeholder="Search…">
       <button class="btn" type="submit">Go</button>
     </form>
-    <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}">↓ CSV</a>
+    <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}&status={{ status }}">↓ CSV</a>
     <span class="tosort"><b id="tosort">{{ to_sort }}</b> to sort</span>
+    <a class="friday {{ 'on' if status == 'newsletter' else '' }}"
+       href="?stream={{ stream }}&week={{ week_idx }}&status=newsletter&place={{ place }}"
+       title="What is going in this week's post">★ <b>{{ for_friday }}</b> for Friday</a>
   </div>
 </div>
 
@@ -47,7 +50,8 @@
 
 <div class="list">
 {% for a in articles %}
-  <div class="item {{ a.status|lower }}" data-url="{{ a.url }}">
+  <div class="item {{ a.status|lower }} {{ 'picked' if a.for_newsletter else '' }}"
+       data-url="{{ a.url }}">
     <span class="kicker kick-{{ a.stream }}">{{ a.stream_label }}</span>
     <h2><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h2>
     <div class="meta">
@@ -88,6 +92,13 @@
       <form method="post" action="/act">
         <input type="hidden" name="url" value="{{ a.url }}">
         <input type="hidden" name="back" value="{{ back }}">
+        {% if a.for_newsletter %}
+          <button class="btn starred" name="action" value="unnewsletter"
+                  title="Take it out of this week's post">★ In the newsletter</button>
+        {% else %}
+          <button class="btn star" name="action" value="newsletter"
+                  title="Mark it for this week's post, and keep it">☆ For the newsletter</button>
+        {% endif %}
         {% if a.status == 'Pending' %}
           <button class="btn keep" name="action" value="keep">✓ Keep</button>
           <button class="btn reject" name="action" value="reject">✕ Reject</button>

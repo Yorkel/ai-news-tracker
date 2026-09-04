@@ -69,7 +69,7 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
     sql = f"""
         select a.url, a.title, a.article_date, a.source, a.summary,
                a.topic_tags, a.geographic_focus,
-               d.action, d.stream_override
+               d.action, d.stream_override, d.selected_for_newsletter
           from articles a
           left join curator_decisions d on d.url = a.url
          where {' and '.join(where)}
@@ -86,6 +86,7 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
         act = r.get("action")
         r["status"] = ("Kept" if act in KEPT_ACTIONS
                        else "Rejected" if act == "reject" else "Pending")
+        r["for_newsletter"] = bool(r.get("selected_for_newsletter"))
 
     if stream and stream != "all":
         rows = [r for r in rows if r["stream"] == stream]
@@ -94,7 +95,11 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
         rows = [r for r in rows if r["stream"] not in S.EXCLUDED_FROM_ALL]
     if place and place != "All":
         rows = [r for r in rows if r["place"] == place]
-    if status != "all":
+    if status == "newsletter":
+        # Not a status alongside kept and rejected: it is a flag on top of
+        # one, so it filters on its own rather than through r["status"].
+        rows = [r for r in rows if r["for_newsletter"]]
+    elif status != "all":
         rows = [r for r in rows if r["status"].lower() == status]
 
     return rows[offset:offset + limit], len(rows)
@@ -134,6 +139,31 @@ def clear_decision(url: str) -> None:
         c.commit()
 
 
+def set_newsletter(url: str, on: bool) -> None:
+    """Flag an article as one for this week's post.
+
+    Independent of keep and reject: an article is flagged *and* kept, so
+    ticking it both marks it for Friday and takes it off the unsorted pile.
+    """
+    with _conn() as c, c.cursor() as cur:
+        cur.execute(
+            """insert into curator_decisions (url, action, label,
+                                              selected_for_newsletter, decided_at)
+               values (%s, 'keep', '', %s, now())
+               on conflict (url) do update set
+                   selected_for_newsletter = excluded.selected_for_newsletter,
+                   action = case when excluded.selected_for_newsletter
+                                 then 'keep' else curator_decisions.action end""",
+            (url, on))
+        c.commit()
+
+
+def newsletter_count(week: tuple[date, date] | None) -> int:
+    """How many articles are marked for this week's post."""
+    rows, _ = fetch_articles(None, None, week, "newsletter", "", 0, 10**6)
+    return len(rows)
+
+
 def set_stream(url: str, stream: str) -> None:
     with _conn() as c, c.cursor() as cur:
         cur.execute(
@@ -144,8 +174,9 @@ def set_stream(url: str, stream: str) -> None:
         c.commit()
 
 
-def kept_rows(week: tuple[date, date] | None, stream: str | None) -> list[dict]:
-    rows, _ = fetch_articles(stream, None, week, "kept", "", 0, 10**6)
+def kept_rows(week: tuple[date, date] | None, stream: str | None,
+              status: str = "kept") -> list[dict]:
+    rows, _ = fetch_articles(stream, None, week, status, "", 0, 10**6)
     return rows
 
 

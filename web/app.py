@@ -121,6 +121,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
     for r in rows:
         r["notes"] = notes.get(r["url"], [])
     to_sort = D.pending_count(stream, place, wk)
+    for_friday = D.newsletter_count(wk)
 
     tabs = [("all", "All", counts.get("all", 0))] + [
         (s, S.SHORT[s], counts.get(s, 0)) for s in S.ORDER
@@ -136,6 +137,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
         "pages": max(1, -(-total // PER_PAGE)),
         "stream_tabs": tabs, "places": ["All"] + S.PLACE_ORDER,
         "week_idx": week_idx, "to_sort": to_sort,
+        "for_friday": for_friday,
         "week_labels": ([(ALL_TIME, "All time")]
                         + [(i, w[2]) for i, w in enumerate(weeks)]),
         "move_targets": [(s, S.SHORT[s]) for s in S.ORDER],
@@ -164,6 +166,10 @@ def act(request: Request, url: str = Form(...), action: str = Form(...),
         return blocked
     if action == "clear":
         D.clear_decision(url)
+    elif action == "newsletter":
+        D.set_newsletter(url, True)
+    elif action == "unnewsletter":
+        D.set_newsletter(url, False)
     else:
         D.set_decision(url, action)
     return _done(request, back)
@@ -181,7 +187,8 @@ def move(request: Request, url: str = Form(...), stream: str = Form(""),
 
 
 @app.get("/export.csv")
-def export_csv(request: Request, stream: str = "all", week: int = 0):
+def export_csv(request: Request, stream: str = "all", week: int = 0,
+               status: str = "kept"):
     blocked = auth.require(request)
     if blocked is not None:
         return blocked
@@ -189,7 +196,9 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     _, wk = _week_range(weeks, week)
     # "all" is passed through rather than converted to None, so the export
     # holds exactly what the All tab holds — papers excluded.
-    rows = D.kept_rows(wk, stream)
+    # status=newsletter exports just this week's picks; anything else keeps
+    # the old behaviour of exporting everything kept.
+    rows = D.kept_rows(wk, stream, status if status == "newsletter" else "kept")
     notes = D.notes_for([r["url"] for r in rows])
 
     buf = io.StringIO()
@@ -207,7 +216,8 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     buf.seek(0)
     # The papers pile is a separate reading list, so it gets a separate name
     # rather than a file that looks like the news export.
-    stem = "papers" if stream == "papers" else f"reading-list_{stream}"
+    stem = ("newsletter" if status == "newsletter"
+            else "papers" if stream == "papers" else f"reading-list_{stream}")
     span = "all-time" if wk is None else f"{wk[0]:%Y-%m-%d}"
     name = f"{stem}_{span}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
