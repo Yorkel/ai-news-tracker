@@ -54,7 +54,14 @@ labels:
 # assignment is the default; the keyword rule overrides it.
 # ─────────────────────────────────────────────────────────────────────────
 streams:
-  order: [governance, geopolitics, safety, research, technical, deployment, podcasts]
+  order: [governance, geopolitics, safety, research, technical, deployment,
+          podcasts, papers]
+
+  # `papers` is deliberately last and deliberately separate. arXiv publishes
+  # ~150 preprints a week to cs.CY alone, three times the next biggest source,
+  # and mixing that into the news would mean the news is never read. It is kept
+  # out of the All tab and exports to its own CSV; see `exclude_from_all`.
+  exclude_from_all: [papers]
 
   governance:
     display: "AI governance, policy and news"
@@ -220,9 +227,6 @@ streams:
     # the academic and research-output half. arXiv cs.CY moved here from
     # `safety` too — it is a preprint category, not a safety organisation.
     sources:
-      - arxiv_cs_ai
-      - arxiv_cs_lg
-      - arxiv_cs_cy
       - nature_news
       - science_news
       - lilian_weng
@@ -265,6 +269,19 @@ streams:
       - mystery_ai_hype
       - tech_wont_save_us
       - last_week_in_ai
+
+  papers:
+    display: "Papers and preprints"
+    short: "Papers"
+    description: "arXiv preprints. Not news, and not part of the All tab: this is the reading pile, exported to its own CSV."
+    # Separated out on 2026-09-04. cs.CY alone was 153 of the 614 articles in
+    # a week — a quarter of everything, and three times the next largest
+    # source. Left in the main list it buried the news it was meant to sit
+    # alongside.
+    sources:
+      - arxiv_cs_cy
+      - arxiv_cs_ai
+      - arxiv_cs_lg
 
 # ─────────────────────────────────────────────────────────────────────────
 # GEOGRAPHY — a FILTER inside every stream, not a stream of its own.

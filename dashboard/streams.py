@@ -41,6 +41,10 @@ _STREAMS = (_CONFIG.get("streams") or {}) if isinstance(_CONFIG, dict) else {}
 ORDER: list[str] = list(_STREAMS.get("order") or ["governance", "geopolitics", "safety", "technical"])
 FALLBACK = "governance"
 
+# Streams held back from the "All" view and the main CSV. arXiv volume would
+# otherwise bury everything else; see the `papers` block in config/domain.yml.
+EXCLUDED_FROM_ALL: list[str] = list(_STREAMS.get("exclude_from_all") or [])
+
 
 def _meta(stream_id: str) -> dict:
     return _STREAMS.get(stream_id) or {}
@@ -68,6 +72,13 @@ _GEO_PATTERNS = [
 
 def assign_stream(source: str | None, title: str | None = None) -> str:
     """Return the stream id for one article. See module docstring for order."""
+    # A held-back stream is decided by its source and nothing else. The
+    # geopolitics keyword override below reads the title, and titles like
+    # "... Platformization and Digital Sovereignty" were pulling arXiv
+    # preprints back into the news list one at a time.
+    held = SOURCE_STREAM.get(str(source or ""))
+    if held in EXCLUDED_FROM_ALL:
+        return held
     if title and _GEO_PATTERNS:
         hay = str(title).lower()
         for p in _GEO_PATTERNS:

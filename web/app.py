@@ -158,7 +158,9 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
     weeks = D.week_options()
     week_idx = max(0, min(week, len(weeks) - 1))
     wk = (weeks[week_idx][0], weeks[week_idx][1])
-    rows = D.kept_rows(wk, None if stream == "all" else stream)
+    # "all" is passed through rather than converted to None, so the export
+    # holds exactly what the All tab holds — papers excluded.
+    rows = D.kept_rows(wk, stream)
     notes = D.notes_for([r["url"] for r in rows])
 
     buf = io.StringIO()
@@ -174,7 +176,10 @@ def export_csv(request: Request, stream: str = "all", week: int = 0):
                     source_display(r["source"]), r["title"], r["url"],
                     summary, why, mine])
     buf.seek(0)
-    name = f"reading-list_{stream}_{date.today():%Y-%m-%d}.csv"  # noqa: E501
+    # The papers pile is a separate reading list, so it gets a separate name
+    # rather than a file that looks like the news export.
+    stem = "papers" if stream == "papers" else f"reading-list_{stream}"
+    name = f"{stem}_{date.today():%Y-%m-%d}.csv"
     return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
                              headers={"Content-Disposition": f'attachment; filename="{name}"'})
 

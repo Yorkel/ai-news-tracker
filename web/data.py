@@ -89,6 +89,9 @@ def fetch_articles(stream: str | None, place: str | None, week: tuple[date, date
 
     if stream and stream != "all":
         rows = [r for r in rows if r["stream"] == stream]
+    elif stream == "all":
+        # "All" means all the news. Papers are asked for by name.
+        rows = [r for r in rows if r["stream"] not in S.EXCLUDED_FROM_ALL]
     if place and place != "All":
         rows = [r for r in rows if r["place"] == place]
     if status != "all":
@@ -102,7 +105,8 @@ def stream_counts(week: tuple[date, date] | None) -> dict[str, int]:
     out = {s: 0 for s in S.ORDER}
     for r in rows:
         out[r["stream"]] = out.get(r["stream"], 0) + 1
-    out["all"] = len(rows)
+    # The All tab shows what All actually contains, so the count has to match.
+    out["all"] = sum(n for s, n in out.items() if s not in S.EXCLUDED_FROM_ALL)
     return out
 
 
