@@ -22,6 +22,15 @@
        aria-current="{{ 'page' if p == place else 'false' }}"
        href="?stream={{ stream }}&week={{ week_idx }}&status={{ status }}&place={{ p }}">{{ p }}</a>
   {% endfor %}
+
+  <form method="post" action="/idea" class="ideas">
+    <h3>Notes to self</h3>
+    <input type="hidden" name="back" value="{{ back }}">
+    <textarea name="body" rows="3"
+      placeholder="A thought, a source worth adding, something that looks broken…"></textarea>
+    <button class="btn">Save</button>
+    {% if ideas %}<p class="ideacount">{{ ideas }} waiting to be reviewed</p>{% endif %}
+  </form>
 </aside>
 <div>
 <div class="filters">

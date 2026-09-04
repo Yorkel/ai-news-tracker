@@ -267,3 +267,4 @@ L6_MLengineer_*.docx
 
 # Private Codex continuity state; keep locally, never publish.
 .codex/CHECKPOINT.md
+config/ideas.yml

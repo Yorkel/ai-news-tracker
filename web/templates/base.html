@@ -151,6 +151,14 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
   border:1px solid var(--rule)}
 .friday:hover,.friday.on{background:var(--gold);border-color:var(--gold);color:#fff}
 .friday b{font-weight:700}
+.ideas{margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
+.ideas textarea{width:100%;box-sizing:border-box;padding:7px 9px;font:inherit;
+  font-size:12.5px;line-height:1.45;resize:vertical;border:1px solid var(--rule);
+  border-radius:8px;background:var(--card);color:var(--ink)}
+.ideas textarea:focus{outline:2px solid var(--accent-2);outline-offset:-1px;
+  border-color:transparent}
+.ideas .btn{margin-top:6px;width:100%;justify-content:center}
+.ideacount{margin:7px 0 0;font-size:11.5px;color:var(--muted)}
 .spot{color:#1B7F45;text-decoration:none;font-weight:600}
 .spot:hover{text-decoration:underline}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .spot{color:#4ECB7B}}
@@ -294,7 +302,8 @@ footer a{color:var(--faint)}
   }
 
   function toast(label, restore) {
-    undo = restore;
+    undo = restore || null;
+    btn.hidden = !undo;
     text.textContent = label;
     bar.classList.add('show');
     clearTimeout(timer);
@@ -325,6 +334,18 @@ footer a{color:var(--faint)}
 
   document.addEventListener('submit', function (e) {
     var form = e.target;
+
+    if (form.classList.contains('ideas')) {
+      var box = form.querySelector('textarea');
+      var written = (box.value || '').trim();
+      if (!written) { e.preventDefault(); return; }
+      e.preventDefault();
+      post('/idea', {body: written, back: location.href});
+      box.value = '';
+      toast('Saved to your notes', null);
+      return;
+    }
+
     var item = form.closest('.item');
     if (!item) return;
     var url = item.dataset.url;
