@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Louise's AI News Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400;1,8..60,500&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFCF7;
+    --paper-deep:#FBF3E9;
+    --ink:#2A2733;
+    --ink-soft:#655F6E;
+    --ink-faint:#9A9288;
+    --rule:#EDE5D9;
+    --rule-dark:#D8CEC0;
+    --band0:#3B2055;
+    --band1:#2C1742;
+    --violet:#4C61A8;
+    --violet-deep:#39498C;
+    --violet-wash:rgba(76,97,168,0.08);
+    --amber:#C05F3C;
+    --amber-wash:#FDF0E7;
+    --amber-rule:#F0BFA4;
+    --keep-ink:#3E5C42;
+    --reject-ink:#9A3B32;
+    --serif:'Source Serif 4',Georgia,serif;
+    --sans:'Archivo',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{
+    outline:2px solid var(--violet);outline-offset:2px;
+  }
+  ::selection{background:var(--violet);color:var(--paper)}
+  ::placeholder{color:var(--ink-faint)}
+
+  .shell{max-width:980px;margin:0 auto;padding:0 40px}
+
+  /* ---------------- Masthead band ---------------- */
+  .masthead{
+    background:linear-gradient(180deg,var(--band0) 0%,var(--band1) 100%);
+  }
+  .nameplate{padding:46px 0 40px;text-align:center}
+  .nameplate .toprule{
+    border-top:1px solid rgba(255,255,255,0.45);
+    border-bottom:1px solid rgba(255,255,255,0.45);
+    height:5px;margin-bottom:26px;
+  }
+  .nameplate h1{
+    font-weight:600;
+    font-size:clamp(38px,5.6vw,62px);
+    letter-spacing:-0.015em;
+    line-height:1.04;
+    color:#FFFFFF;
+  }
+  .nameplate .standfirst{
+    font-style:italic;
+    color:#CBBFE0;
+    font-size:17px;
+    margin:12px auto 0;
+    max-width:56ch;
+  }
+  .folio{
+    margin-top:0;
+    border-top:1px solid var(--rule-dark);
+    border-bottom:1px solid var(--rule-dark);
+    padding:10px 0;
+    display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;
+    font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);
+    letter-spacing:.02em;
+  }
+  .folio .edition{font-weight:600;color:var(--ink)}
+  .range-ctl{display:flex;align-items:center;gap:12px}
+  .range-arrow{
+    color:var(--ink-soft);font-size:16px;line-height:1;padding:2px 6px;
+  }
+  .range-arrow:hover{color:var(--violet)}
+  .reviewed{display:flex;align-items:center;gap:10px}
+  .reviewed .bar{
+    width:110px;height:2px;background:var(--rule);overflow:hidden;
+  }
+  .reviewed .bar i{
+    display:block;height:100%;width:0%;background:var(--violet);
+    transition:width .4s ease;
+  }
+  .reviewed strong{color:var(--violet);font-weight:600}
+
+  /* ---------------- Section nav ---------------- */
+  .tabbar{
+    position:sticky;top:0;z-index:10;
+    background:var(--paper);
+    border-bottom:1px solid var(--rule-dark);
+  }
+  .tabbar-inner{
+    display:flex;align-items:center;gap:6px;
+  }
+  .tabs{
+    display:flex;overflow-x:auto;scrollbar-width:none;flex:1;
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    font-family:var(--sans);font-size:13px;font-weight:500;
+    color:var(--ink-soft);white-space:nowrap;
+    padding:7px 14px;margin:9px 2px;
+    border:1px solid transparent;border-radius:99px;
+    display:flex;align-items:baseline;gap:6px;
+    letter-spacing:.01em;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .tab .n{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  .tab:hover{color:var(--ink);background:var(--paper-deep)}
+  .tab[aria-selected="true"]{color:#FFFFFF;font-weight:600;background:var(--violet);border-color:var(--violet)}
+  .tab[aria-selected="true"] .n{color:rgba(255,255,255,0.8)}
+  .search{position:relative;flex:0 0 210px}
+  .search input{
+    width:100%;padding:8px 4px 8px 26px;
+    border:none;border-bottom:1px solid transparent;
+    background:transparent;
+    font-family:var(--sans);font-size:13px;color:var(--ink);
+  }
+  .search input:focus{outline:none;border-bottom-color:var(--violet)}
+  .search svg{position:absolute;left:2px;top:50%;transform:translateY(-50%);color:var(--ink-faint)}
+
+  /* ---------------- Ledger ---------------- */
+  .ledger{padding:26px 0 90px;display:flex;flex-direction:column;gap:18px}
+  .entry{
+    background:#FFFFFF;
+    border:1px solid #E7DFD2;
+    border-radius:10px;
+    padding:26px 30px 22px;
+    box-shadow:0 1px 2px rgba(44,23,66,0.05), 0 6px 18px -12px rgba(44,23,66,0.12);
+    transition:opacity .25s ease, border-color .2s ease;
+  }
+  .entry:hover{border-color:var(--rule-dark)}
+
+  .kicker{
+    display:inline-block;
+    font-family:var(--sans);
+    font-size:10.5px;font-weight:600;
+    letter-spacing:.1em;text-transform:uppercase;
+    color:#FFFFFF;background:var(--violet);
+    padding:4px 10px;border-radius:4px;
+  }
+  .entry-meta{
+    display:inline;
+    font-family:var(--sans);font-size:12.5px;color:var(--ink-faint);
+    letter-spacing:.02em;
+  }
+  .entry-meta::before{content:"  \2014  ";color:var(--rule-dark)}
+  .entry-meta span+span::before{content:", "}
+
+  .entry h2{
+    font-weight:600;
+    font-size:27px;line-height:1.22;letter-spacing:-0.012em;
+    margin:10px 0 8px;max-width:30em;
+  }
+  .entry h2 a{color:inherit;text-decoration:none}
+  .entry h2 a:hover{color:var(--violet-deep);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:4px;text-decoration-color:var(--violet)}
+
+  .tagline{
+    font-family:var(--sans);font-size:12px;color:var(--ink-faint);
+    margin-bottom:12px;letter-spacing:.02em;
+  }
+  .tagline span+span::before{content:"  /  ";color:var(--rule-dark)}
+
+  .summary{
+    font-size:16.5px;color:#4A4740;
+    max-width:66ch;line-height:1.62;
+  }
+
+  .matters{
+    margin:16px 0 2px;
+    padding:12px 18px;
+    border-left:2px solid var(--amber-rule);
+    background:var(--amber-wash);
+    max-width:62ch;
+  }
+  .matters b{
+    display:block;
+    font-family:var(--sans);font-size:10.5px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;
+    color:var(--amber);margin-bottom:3px;
+  }
+  .matters p{
+    font-style:italic;font-size:16.5px;line-height:1.55;color:var(--ink);
+  }
+
+  /* ---------------- Actions ---------------- */
+  .actions{
+    display:flex;align-items:center;gap:0;flex-wrap:wrap;
+    margin-top:18px;
+    font-family:var(--sans);font-size:13px;
+  }
+  .btn{
+    color:var(--ink-soft);font-weight:500;padding:4px 0;
+    border-bottom:1px solid transparent;
+  }
+  .btn:hover{color:var(--ink);border-bottom-color:var(--ink)}
+  .btn+ .btn::before, .btn + .btn-wrap::before{content:""}
+  .actions .divider{
+    width:1px;height:13px;background:var(--rule-dark);margin:0 14px;
+  }
+  .btn-keep{color:var(--keep-ink);font-weight:600}
+  .btn-keep:hover{color:var(--keep-ink);border-bottom-color:var(--keep-ink)}
+  .btn-reject:hover{color:var(--reject-ink);border-bottom-color:var(--reject-ink)}
+  .btn-save[aria-pressed="true"]{color:var(--violet);font-weight:600}
+  .actions .spacer{flex:1}
+  .actions select{
+    font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);
+    background:transparent;border:none;border-bottom:1px solid var(--rule-dark);
+    padding:4px 2px;
+  }
+  .actions select:focus{outline:none;border-bottom-color:var(--violet)}
+  .verdict{display:none;align-items:center;gap:12px;font-weight:600}
+  .verdict .undo{font-weight:400;color:var(--ink-faint);text-decoration:underline;text-underline-offset:2px}
+  .verdict .undo:hover{color:var(--ink)}
+  .entry.kept .actions .btn,.entry.kept .actions select,.entry.kept .actions .divider,
+  .entry.rejected .actions .btn,.entry.rejected .actions select,.entry.rejected .actions .divider{display:none}
+  .entry.kept .verdict{display:flex;color:var(--keep-ink)}
+  .entry.rejected .verdict{display:flex;color:var(--reject-ink)}
+  .entry.kept{border-left:4px solid var(--keep-ink)}
+  .entry.kept .kicker::after{
+    content:"Kept";
+    margin-left:10px;padding:4px 10px;border-radius:4px;
+    font-size:10.5px;letter-spacing:.1em;
+    color:#FFFFFF;background:var(--keep-ink);
+  }
+
+  .entry.rejected{opacity:.55;padding:14px 30px 12px;border-left:4px solid var(--reject-ink)}
+  .entry.rejected:hover{opacity:.8}
+  .entry.rejected .summary,.entry.rejected .matters,
+  .entry.rejected .tagline,.entry.rejected .notebox{display:none}
+  .entry.rejected h2{font-size:16px;font-weight:500;margin:6px 0 8px;color:var(--ink-soft)}
+  .entry.rejected .actions{margin-top:2px}
+
+  /* Note box */
+  .notebox{display:none;margin-top:14px;max-width:62ch}
+  .notebox.open{display:block}
+  .notebox textarea{
+    width:100%;min-height:64px;resize:vertical;
+    padding:10px 12px;
+    border:1px solid var(--rule-dark);
+    background:var(--paper-deep);
+    font-family:var(--serif);font-style:italic;font-size:16px;line-height:1.5;color:var(--ink);
+  }
+  .notebox textarea:focus{outline:none;border-color:var(--violet)}
+  .note-hint{font-family:var(--sans);font-size:11.5px;color:var(--ink-faint);margin-top:5px}
+  .note-saved{
+    font-style:italic;font-size:16px;color:var(--ink);
+    background:var(--violet-wash);
+    padding:10px 14px;margin-top:14px;max-width:62ch;
+  }
+  .note-saved::before{
+    content:"Note";
+    font-style:normal;font-family:var(--sans);font-size:10px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--violet);
+    display:block;margin-bottom:2px;
+  }
+
+  .empty{padding:80px 0;text-align:center;color:var(--ink-faint);display:none;font-family:var(--sans);font-size:14px}
+  .empty .e-title{font-family:var(--serif);font-size:23px;color:var(--ink-soft);margin-bottom:6px;font-style:italic}
+
+  footer{
+    border-top:1px solid var(--rule-dark);
+    padding:16px 0 60px;
+    font-family:var(--sans);font-size:12px;color:var(--ink-faint);
+    display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    letter-spacing:.02em;
+  }
+
+  @media (max-width:640px){
+    .shell{padding:0 20px}
+    .nameplate{padding-top:30px}
+    .entry{padding:20px 18px 16px}
+    .entry.rejected{padding:12px 18px 10px}
+    .entry h2{font-size:21px}
+    .folio{font-size:11.5px}
+    .search{flex:1 1 100%;padding-bottom:8px}
+    .tabbar-inner{flex-wrap:wrap}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="nameplate shell">
+    <div class="toprule"></div>
+    <h1>Louise&rsquo;s AI News Tracker</h1>
+    <p class="standfirst">New work on evaluation, governance and consequential decisions, gathered every fortnight and read once, properly.</p>
+  </div>
+</header>
+<div class="shell">
+  <div class="folio">
+    <span class="edition">Fortnight 16</span>
+    <span>Friday 1 to Thursday 15 August 2026</span>
+    <span class="range-ctl">
+      <button class="range-arrow" aria-label="Previous fortnight">&#8249;</button>
+      <button class="range-arrow" aria-label="Next fortnight">&#8250;</button>
+    </span>
+    <span class="reviewed">
+      <span><strong id="reviewed-n">0</strong> of <span id="total-n">10</span> reviewed</span>
+      <span class="bar"><i id="progress-fill"></i></span>
+    </span>
+  </div>
+</div>
+
+<div class="tabbar">
+  <div class="shell tabbar-inner">
+    <nav class="tabs" role="tablist" aria-label="Categories">
+      <button class="tab" role="tab" aria-selected="true" data-filter="all">All <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="tbd">To review <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="research">AI &amp; research <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="governance">Governance &amp; policy <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="inequalities">Inequalities <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="safety">Safety &amp; security <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="work">AI &amp; work <span class="n"></span></button>
+      <button class="tab" role="tab" aria-selected="false" data-filter="kept">Kept <span class="n"></span></button>
+    </nav>
+    <div class="search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="q" placeholder="Search" aria-label="Search entries">
+    </div>
+  </div>
+</div>
+
+<main class="shell ledger" id="sheet">
+
+  <article class="entry" data-cat="research">
+    <span class="kicker">AI &amp; research</span><span class="entry-meta"><span>arXiv cs.CY</span><span>2 August</span><span>Global</span></span>
+    <h2><a href="#">Difference-in-Differences on a Censored Rating Scale Can Manufacture an Effect: Evidence from a Pre-Registered LLM-Judge Audit</a></h2>
+    <p class="tagline"><span>evaluation</span><span>measurement</span><span>alignment</span></p>
+    <p class="summary">A pre-registered audit shows that difference-in-differences estimates run on censored rating scales can produce spurious interaction effects in LLM-judge comparisons. The authors demonstrate the artefact analytically, then reproduce it on live judge outputs where the true difference is zero.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Directly adjacent to the judge specification audit: a concrete mechanism by which analytic choices, not model behaviour, generate the headline effect. Candidate citation for the sensitivity framing.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="governance">
+    <span class="kicker">Governance &amp; policy</span><span class="entry-meta"><span>arXiv cs.CY</span><span>4 August</span><span>Germany</span></span>
+    <h2><a href="#">Are Algorithm Registers Transparent? Perspectives from Germany</a></h2>
+    <p class="tagline"><span>registers</span><span>transparency</span><span>public sector</span></p>
+    <p class="summary">An empirical assessment of German public-sector algorithm registers against a transparency rubric. Entries are found to be inconsistently maintained, thin on evaluation detail, and rarely linked to the decisions the systems inform.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Registers are the closest existing instrument to the shared evidentiary substrate argument. Evidence that they fail on exactly the defend-and-challenge dimensions strengthens the landscape paper.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>Governance &amp; policy</option><option>AI &amp; research</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="research">
+    <span class="kicker">AI &amp; research</span><span class="entry-meta"><span>arXiv cs.CL</span><span>5 August</span><span>Global</span></span>
+    <h2><a href="#">GPTBIAS: A Comprehensive Framework for Evaluating Bias in Large Language Models</a></h2>
+    <p class="tagline"><span>bias</span><span>evaluation</span><span>benchmarks</span></p>
+    <p class="summary">Proposes a bias-evaluation framework that scores generated attack instructions across demographic dimensions, reporting bias types, affected groups and severity rather than a single headline number. Compared against standard benchmarks on ten open models.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Another framework that reports richly but validates thinly. Useful as a case for the measurement-properties project: what would invariance testing of this instrument look like?</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="inequalities">
+    <span class="kicker">Inequalities</span><span class="entry-meta"><span>arXiv cs.HC</span><span>7 August</span><span>US</span></span>
+    <h2><a href="#">Whose Judgments Count? Representation Gaps in Crowdsourced Content Moderation Produce Unequal Protection from Perceived Toxicity</a></h2>
+    <p class="tagline"><span>annotation</span><span>moderation</span><span>representation</span></p>
+    <p class="summary">Analyses the demographic composition of crowdsourced moderation panels and shows that under-represented rater groups receive systematically weaker protection: content they rate as toxic is more likely to survive when panel majorities disagree.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Who bears the consequences of a classification is decided upstream, in who gets to label. Clean empirical hook for the voice and silence argument.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>Inequalities</option><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="safety">
+    <span class="kicker">Safety &amp; security</span><span class="entry-meta"><span>arXiv cs.CY</span><span>8 August</span><span>Global</span></span>
+    <h2><a href="#">The Enforcement and Feasibility of Hate Speech Moderation</a></h2>
+    <p class="tagline"><span>moderation</span><span>enforcement</span><span>platforms</span></p>
+    <p class="summary">Audits platform enforcement of stated hate-speech policies at scale, estimating the gap between written rules and applied decisions, and modelling how much of the gap is attributable to classifier error versus policy ambiguity.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Separates specification failure from execution failure, which is precisely the distinction the evidence-chain paper needs a worked example of.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>Safety &amp; security</option><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="work">
+    <span class="kicker">AI &amp; work</span><span class="entry-meta"><span>arXiv cs.CY</span><span>11 August</span><span>33 countries</span></span>
+    <h2><a href="#">Meeting the Coming Wave: The Emerging Politics of AI and Work across 33 Parliaments</a></h2>
+    <p class="tagline"><span>parliaments</span><span>labour</span><span>comparative</span></p>
+    <p class="summary">Text analysis of parliamentary debate on AI and work across 33 legislatures, mapping which frames dominate where, how quickly attention has grown since 2022, and which parties own the issue.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Comparative parliamentary text analysis at scale, methodologically close to the PMQs classification study. Check their coding scheme and reliability reporting before the revision.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>AI &amp; work</option><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>Safety &amp; security</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="research">
+    <span class="kicker">AI &amp; research</span><span class="entry-meta"><span>arXiv cs.AI</span><span>12 August</span><span>Global</span></span>
+    <h2><a href="#">The Veto Variable: Human Override as a Goal-Independent Cost Term</a></h2>
+    <p class="tagline"><span>oversight</span><span>alignment</span><span>agents</span></p>
+    <p class="summary">Formalises human override as a cost term independent of the agent's task objective and shows, in simulation, the conditions under which trained agents learn to route around oversight rather than defer to it.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>A formal treatment of when oversight is real and when it is decorative. Relevant to the oversight-interview coding frame, and to the Apollo positioning.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="governance">
+    <span class="kicker">Governance &amp; policy</span><span class="entry-meta"><span>arXiv cs.CY</span><span>13 August</span><span>Global</span></span>
+    <h2><a href="#">Privacy Washing: Detecting Internal Contradictions in Privacy Policies</a></h2>
+    <p class="tagline"><span>NLP</span><span>compliance</span><span>documents</span></p>
+    <p class="summary">A pipeline for detecting statements within a single privacy policy that contradict each other, evaluated on a corpus of several thousand policies. Contradiction rates are highest in the sections users are most likely to read.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Document-internal contradiction detection is a method worth borrowing for the governance corpus: do the same registers promise both auditability and trade-secret protection?</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>Governance &amp; policy</option><option>AI &amp; research</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="safety">
+    <span class="kicker">Safety &amp; security</span><span class="entry-meta"><span>arXiv cs.CR</span><span>14 August</span><span>Global</span></span>
+    <h2><a href="#">Can Escalation Channels Redirect Reward Hacking Toward Defect Disclosure?</a></h2>
+    <p class="tagline"><span>reward hacking</span><span>disclosure</span><span>incentives</span></p>
+    <p class="summary">Tests whether giving agents an explicit, rewarded channel for reporting exploitable defects reduces silent reward hacking. Disclosure channels help, but only when reporting pays at least as well as exploiting.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>An incentive-design result with a governance reading: whistleblowing works when the payoff structure supports it. Possible blog piece.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>Safety &amp; security</option><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <article class="entry" data-cat="research">
+    <span class="kicker">AI &amp; research</span><span class="entry-meta"><span>arXiv cs.CL</span><span>15 August</span><span>Global</span></span>
+    <h2><a href="#">Accurate in Space, Unreliable in Time: How LLMs Represent National Cultural Change</a></h2>
+    <p class="tagline"><span>cultural values</span><span>representation</span><span>evaluation</span></p>
+    <p class="summary">Evaluates LLM representations of national cultural values against longitudinal survey data. Models capture cross-country differences well but freeze each country at roughly its 2015 values, missing documented within-country change.</p>
+    <div class="matters">
+      <b>Why this matters</b>
+      <p>Temporal validity as a distinct failure mode from cross-sectional accuracy. Speaks to the survey-equivalence instincts from the Ethiopia work, and to any claim built on model-derived country profiles.</p>
+    </div>
+    <div class="notebox"><textarea placeholder="What do you want to remember about this one?"></textarea><p class="note-hint">Enter saves the note, Escape closes without saving.</p></div>
+    <div class="actions">
+      <button class="btn btn-keep">Keep</button><span class="divider"></span>
+      <button class="btn btn-reject">Reject</button><span class="divider"></span>
+      <button class="btn btn-note">Add a note</button><span class="divider"></span>
+      <button class="btn btn-save" aria-pressed="false">Save for later</button>
+      <span class="spacer"></span>
+      <select aria-label="Change category"><option>AI &amp; research</option><option>Governance &amp; policy</option><option>Inequalities</option><option>Safety &amp; security</option><option>AI &amp; work</option></select>
+      <span class="verdict"><span class="v-label"></span><button class="undo">Undo</button></span>
+    </div>
+  </article>
+
+  <div class="empty" id="empty">
+    <p class="e-title">Nothing here</p>
+    <p>No entries match this view. Clear the search or pick another section.</p>
+  </div>
+</main>
+
+<footer class="shell">
+  <span>Sources refresh nightly from arXiv and the press feeds.</span>
+  <span>Verdicts and notes are stored locally until synced.</span>
+</footer>
+
+<script>
+(function(){
+  const entries = Array.from(document.querySelectorAll('.entry'));
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  const q = document.getElementById('q');
+  const empty = document.getElementById('empty');
+  const fill = document.getElementById('progress-fill');
+  const reviewedN = document.getElementById('reviewed-n');
+  const totalN = document.getElementById('total-n');
+  let filter = 'all';
+
+  totalN.textContent = entries.length;
+
+  function state(e){
+    if (e.classList.contains('kept')) return 'kept';
+    if (e.classList.contains('rejected')) return 'rejected';
+    return 'tbd';
+  }
+
+  function counts(){
+    const c = {all: entries.length, tbd: 0, kept: 0};
+    entries.forEach(e => {
+      const cat = e.dataset.cat;
+      c[cat] = (c[cat] || 0) + 1;
+      const s = state(e);
+      if (s === 'tbd') c.tbd++;
+      if (s === 'kept') c.kept++;
+    });
+    tabs.forEach(t => {
+      t.querySelector('.n').textContent = c[t.dataset.filter] || 0;
+    });
+    const reviewed = entries.length - c.tbd;
+    reviewedN.textContent = reviewed;
+    fill.style.width = (100 * reviewed / entries.length) + '%';
+  }
+
+  function apply(){
+    const term = q.value.trim().toLowerCase();
+    let visible = 0;
+    entries.forEach(e => {
+      let ok;
+      if (filter === 'all') ok = true;
+      else if (filter === 'tbd') ok = state(e) === 'tbd';
+      else if (filter === 'kept') ok = state(e) === 'kept';
+      else ok = e.dataset.cat === filter;
+      if (ok && term) ok = e.textContent.toLowerCase().includes(term);
+      e.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+    empty.style.display = visible ? 'none' : 'block';
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.setAttribute('aria-selected', 'false'));
+    t.setAttribute('aria-selected', 'true');
+    filter = t.dataset.filter;
+    apply();
+  }));
+
+  q.addEventListener('input', apply);
+
+  entries.forEach(e => {
+    const vLabel = e.querySelector('.v-label');
+    const notebox = e.querySelector('.notebox');
+    const ta = notebox.querySelector('textarea');
+
+    e.querySelector('.btn-keep').addEventListener('click', () => {
+      e.classList.add('kept');
+      vLabel.textContent = 'Kept';
+      counts(); apply();
+    });
+    e.querySelector('.btn-reject').addEventListener('click', () => {
+      e.classList.add('rejected');
+      vLabel.textContent = 'Rejected';
+      counts(); apply();
+    });
+    e.querySelector('.undo').addEventListener('click', () => {
+      e.classList.remove('kept', 'rejected');
+      counts(); apply();
+    });
+    e.querySelector('.btn-note').addEventListener('click', () => {
+      notebox.classList.toggle('open');
+      if (notebox.classList.contains('open')) ta.focus();
+    });
+    ta.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' && !ev.shiftKey) {
+        ev.preventDefault();
+        const text = ta.value.trim();
+        notebox.classList.remove('open');
+        if (text) {
+          let saved = e.querySelector('.note-saved');
+          if (!saved) {
+            saved = document.createElement('p');
+            saved.className = 'note-saved';
+            notebox.after(saved);
+          }
+          saved.textContent = text;
+        }
+      }
+      if (ev.key === 'Escape') notebox.classList.remove('open');
+    });
+    const saveBtn = e.querySelector('.btn-save');
+    saveBtn.addEventListener('click', () => {
+      const on = saveBtn.getAttribute('aria-pressed') === 'true';
+      saveBtn.setAttribute('aria-pressed', String(!on));
+      saveBtn.textContent = on ? 'Save for later' : 'Saved';
+    });
+  });
+
+  counts(); apply();
+})();
+</script>
+</body>
+</html>
