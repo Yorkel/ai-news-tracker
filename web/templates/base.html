@@ -143,14 +143,12 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
 .kick-deployment{background:#C4622E}
 .kick-podcasts{background:#5C3D6E}
 .kick-papers{background:#3E6B63}
-.btn.star:hover{background:var(--gold);border-color:var(--gold);color:#fff}
-.btn.starred{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
+.relevant{display:inline-flex;align-items:center;gap:6px;font-size:13px;
+  color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+.relevant input{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;margin:0}
+.relevant:hover{color:var(--ink)}
 .item.picked{border-left:4px solid var(--gold)}
-.friday{display:inline-flex;align-items:center;gap:5px;text-decoration:none;
-  font-size:13px;color:var(--muted);padding:5px 10px;border-radius:8px;
-  border:1px solid var(--rule)}
-.friday:hover,.friday.on{background:var(--gold);border-color:var(--gold);color:#fff}
-.friday b{font-weight:700}
+.item.picked .relevant{color:var(--ink);font-weight:600}
 .ideas{margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
 .ideas textarea{width:100%;box-sizing:border-box;padding:7px 9px;font:inherit;
   font-size:12.5px;line-height:1.45;resize:vertical;border:1px solid var(--rule);
@@ -332,6 +330,15 @@ footer a{color:var(--faint)}
     });
   }
 
+  document.addEventListener('change', function (e) {
+    var box = e.target;
+    if (!box.classList || !box.classList.contains('relbox')) return;
+    var item = box.closest('.item');
+    if (item) item.classList.toggle('picked', box.checked);
+    post('/act', {url: box.dataset.url, back: location.href,
+                  action: box.checked ? 'newsletter' : 'unnewsletter'});
+  });
+
   document.addEventListener('submit', function (e) {
     var form = e.target;
 
@@ -371,20 +378,9 @@ footer a{color:var(--faint)}
         bump(1);
         return;
       }
-      var words = {keep: 'Kept', reject: 'Rejected',
-                   newsletter: "In Friday's post",
-                   unnewsletter: "Taken out of Friday's post"};
-      // Undo has to be the inverse of what was pressed. Clearing a newsletter
-      // tick would also wipe the keep underneath it.
-      var undoOf = {newsletter: 'unnewsletter', unnewsletter: 'newsletter'};
-      var friday = document.querySelector('.friday b');
-      if (friday && undoOf[pressed]) {
-        friday.textContent = Math.max(0, (parseInt(friday.textContent, 10) || 0)
-                                         + (pressed === 'newsletter' ? 1 : -1));
-      }
+      var words = {keep: 'Kept', reject: 'Rejected'};
       post(action, body);
-      remove(item, words[pressed] || 'Sorted', url,
-             undoOf[pressed] || 'clear', pressed !== 'unnewsletter');
+      remove(item, words[pressed] || 'Sorted', url, 'clear', true);
       return;
     }
 

@@ -140,20 +140,19 @@ def clear_decision(url: str) -> None:
 
 
 def set_newsletter(url: str, on: bool) -> None:
-    """Flag an article as one for this week's post.
+    """Tick or untick "high relevance" on an article.
 
-    Independent of keep and reject: an article is flagged *and* kept, so
-    ticking it both marks it for Friday and takes it off the unsorted pile.
+    Only the flag. Keep and reject are a separate decision, so ticking the
+    box must not sort the article: an untouched article stays Pending and
+    stays on the pile, and an already kept or rejected one keeps that.
     """
     with _conn() as c, c.cursor() as cur:
         cur.execute(
             """insert into curator_decisions (url, action, label,
-                                              selected_for_newsletter, decided_at)
-               values (%s, 'keep', '', %s, now())
+                                              selected_for_newsletter)
+               values (%s, '', '', %s)
                on conflict (url) do update set
-                   selected_for_newsletter = excluded.selected_for_newsletter,
-                   action = case when excluded.selected_for_newsletter
-                                 then 'keep' else curator_decisions.action end""",
+                   selected_for_newsletter = excluded.selected_for_newsletter""",
             (url, on))
         c.commit()
 

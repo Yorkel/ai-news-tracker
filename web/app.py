@@ -121,7 +121,6 @@ def index(request: Request, stream: str = "all", place: str = "All",
     for r in rows:
         r["notes"] = notes.get(r["url"], [])
     to_sort = D.pending_count(stream, place, wk)
-    for_friday = D.newsletter_count(wk)
     ideas = D.idea_count()
 
     tabs = [("all", "All", counts.get("all", 0))] + [
@@ -138,7 +137,7 @@ def index(request: Request, stream: str = "all", place: str = "All",
         "pages": max(1, -(-total // PER_PAGE)),
         "stream_tabs": tabs, "places": ["All"] + S.PLACE_ORDER,
         "week_idx": week_idx, "to_sort": to_sort,
-        "for_friday": for_friday, "ideas": ideas,
+        "ideas": ideas,
         "week_labels": ([(ALL_TIME, "All time")]
                         + [(i, w[2]) for i, w in enumerate(weeks)]),
         "move_targets": [(s, S.SHORT[s]) for s in S.ORDER],

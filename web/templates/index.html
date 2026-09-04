@@ -49,9 +49,6 @@
     </form>
     <a class="btn primary" href="/export.csv?stream={{ stream }}&week={{ week_idx }}&status={{ status }}">↓ CSV</a>
     <span class="tosort"><b id="tosort">{{ to_sort }}</b> to sort</span>
-    <a class="friday {{ 'on' if status == 'newsletter' else '' }}"
-       href="?stream={{ stream }}&week={{ week_idx }}&status=newsletter&place={{ place }}"
-       title="What is going in this week's post">★ <b>{{ for_friday }}</b> for Friday</a>
   </div>
 </div>
 
@@ -98,16 +95,14 @@
       </div>
     {% endif %}
     <div class="acts">
+      <label class="relevant">
+        <input type="checkbox" class="relbox" data-url="{{ a.url }}"
+               {{ 'checked' if a.for_newsletter else '' }}>
+        High relevance
+      </label>
       <form method="post" action="/act">
         <input type="hidden" name="url" value="{{ a.url }}">
         <input type="hidden" name="back" value="{{ back }}">
-        {% if a.for_newsletter %}
-          <button class="btn starred" name="action" value="unnewsletter"
-                  title="Take it out of this week's post">★ In the newsletter</button>
-        {% else %}
-          <button class="btn star" name="action" value="newsletter"
-                  title="Mark it for this week's post, and keep it">☆ For the newsletter</button>
-        {% endif %}
         {% if a.status == 'Pending' %}
           <button class="btn keep" name="action" value="keep">✓ Keep</button>
           <button class="btn reject" name="action" value="reject">✕ Reject</button>
