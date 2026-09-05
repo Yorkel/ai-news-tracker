@@ -12,6 +12,7 @@ on what a stream is and when a week starts.
 from __future__ import annotations
 
 import os
+import re
 from datetime import date, timedelta
 
 import psycopg
@@ -144,6 +145,45 @@ def clear_decision(url: str) -> None:
     with _conn() as c, c.cursor() as cur:
         cur.execute("delete from curator_decisions where url = %s", (url,))
         c.commit()
+
+
+# Words that carry no signal in a question about an AI news database: every
+# article is about AI, so matching on "ai" or "news" retrieves everything.
+_STOP = frozenset("""
+a an and are as at be but by can did do does for from had has have how i if in
+is it its me my no not of on or our so than that the their them then there
+these they this toups was we were what when where which who why will with you
+your ai artificial intelligence news article articles anything something tell
+show find about happened happening latest recent week weeks any some
+""".split())
+
+
+def search_corpus(question: str, week: tuple[date, date] | None,
+                  limit: int = 40) -> list[dict]:
+    """Articles matching a question, best first.
+
+    Keyword retrieval rather than embeddings: at ~1,400 articles the corpus is
+    small enough that scoring title and summary word overlap finds the right
+    handful, and it costs nothing to run and nothing to keep in step when new
+    articles arrive.
+    """
+    words = [w for w in re.findall(r"[a-z0-9][a-z0-9'-]{2,}", (question or "").lower())
+             if w not in _STOP]
+    if not words:
+        return []
+
+    rows, _ = fetch_articles(None, None, week, "all", "", 0, 10**6)
+    scored = []
+    for r in rows:
+        title = (r["title"] or "").lower()
+        summary = (r.get("summary") or "").lower()
+        # A word in the headline is worth more than the same word in the body.
+        score = sum(3 for w in words if w in title) + sum(1 for w in words if w in summary)
+        if score:
+            scored.append((score, r))
+    scored.sort(key=lambda x: (-x[0], x[1]["article_date"] is None,
+                               x[1]["article_date"] or date.min), reverse=False)
+    return [r for _, r in scored[:limit]]
 
 
 def digest_rows(week: tuple[date, date] | None) -> list[dict]:

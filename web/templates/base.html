@@ -157,6 +157,30 @@ input[type=search]:focus,select:focus{outline:2px solid var(--accent-2);outline-
   border-color:transparent}
 .ideas .btn{margin-top:6px;width:100%;justify-content:center}
 .ideacount{margin:7px 0 0;font-size:11.5px;color:var(--muted)}
+.dgroup{margin:26px 0 0}
+.dhead{font-family:Fraunces,Georgia,serif;font-size:19px;margin:0 0 10px;
+  padding-bottom:6px;border-bottom:2px solid var(--accent)}
+.dn{font-size:12px;font-weight:600;color:var(--muted);background:var(--sunk);
+  border-radius:9px;padding:1px 8px;vertical-align:middle;margin-left:6px}
+.ditem{padding:12px 0 12px 14px;border-left:3px solid var(--rule);margin-bottom:4px}
+.ditem.picked{border-left-color:var(--gold)}
+.ditem h3{margin:0 0 3px;font-size:16px;line-height:1.35;font-weight:600}
+.ditem h3 a{color:var(--ink);text-decoration:none}
+.ditem h3 a:hover{color:var(--accent);text-decoration:underline}
+.dmeta{margin:0 0 6px;font-size:12px;color:var(--muted)}
+.hi{background:var(--gold);color:#fff;border-radius:5px;padding:1px 6px;
+  font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  margin-left:6px}
+.dsum{margin:0 0 5px;font-size:14px;line-height:1.55}
+.dwhy{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2);font-style:italic}
+.dnote{margin:6px 0 0;font-size:13px;padding:6px 10px;border-radius:7px;
+  background:var(--accent-soft);color:var(--ink-2)}
+.empty{padding:40px 0;color:var(--muted)}
+.askform{display:flex;gap:8px;margin:18px 0 6px;flex-wrap:wrap}
+.askform input[type=search]{flex:1;min-width:280px;padding:11px 14px;font-size:15px}
+.answer{white-space:pre-wrap;background:var(--card);border:1px solid var(--rule);
+  border-left:3px solid var(--accent);border-radius:10px;padding:16px 18px;
+  margin:16px 0 26px;font-size:15px;line-height:1.62}
 .spot{color:#1B7F45;text-decoration:none;font-weight:600}
 .spot:hover{text-decoration:underline}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .spot{color:#4ECB7B}}
@@ -443,6 +467,38 @@ footer a{color:var(--faint)}
       var n = form.closest('.note');
       if (n) n.remove();
     }
+  });
+})();
+</script>
+<script>
+(function () {
+  var btn = document.getElementById('copymd');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var out = [];
+    document.querySelectorAll('#digest .dgroup').forEach(function (g) {
+      out.push('## ' + g.querySelector('.dhead').childNodes[0].textContent.trim(), '');
+      g.querySelectorAll('.ditem').forEach(function (it) {
+        var a = it.querySelector('h3 a');
+        var meta = it.querySelector('.dmeta');
+        var sum = it.querySelector('.dsum');
+        var why = it.querySelector('.dwhy');
+        out.push('**[' + a.textContent.trim() + '](' + a.href + ')**');
+        out.push('*' + meta.textContent.replace(/\s+/g, ' ').trim() + '*');
+        if (sum) out.push('', sum.textContent.trim());
+        if (why) out.push('', '> ' + why.textContent.trim());
+        it.querySelectorAll('.dnote').forEach(function (n) {
+          out.push('', 'My note: ' + n.textContent.trim());
+        });
+        out.push('');
+      });
+    });
+    var text = out.join('\n');
+    navigator.clipboard.writeText(text).then(function () {
+      var was = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(function () { btn.textContent = was; }, 1600);
+    });
   });
 })();
 </script>

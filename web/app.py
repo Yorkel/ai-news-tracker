@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import re
 import subprocess
 from datetime import date
@@ -228,6 +229,74 @@ def digest(request: Request, week: int = 0):
         "week_labels": ([(ALL_TIME, "All time")]
                         + [(i, w[2]) for i, w in enumerate(weeks)]),
     })
+
+
+_ASK_SYSTEM = """You answer questions about a personal AI news database.
+
+You are given the articles that matched the question. Answer only from them.
+If they do not cover it, say so plainly rather than filling the gap from
+general knowledge — the point of the tool is to show what was collected, and
+a confident answer drawn from elsewhere makes it useless.
+
+Cite as [n] matching the numbered article. Be concise and concrete: what
+happened, who did it, what changed. Group by theme when several articles
+cover the same story. British spelling."""
+
+
+@app.get("/ask", response_class=HTMLResponse)
+def ask_form(request: Request, q: str = "", week: int = ALL_TIME):
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
+    weeks = D.week_options()
+    week_idx, wk = _week_range(weeks, week)
+
+    answer, hits = "", []
+    if q.strip():
+        hits = D.search_corpus(q, wk)
+        for r in hits:
+            r["source_label"] = source_display(r["source"])
+            r["article_date"] = (r["article_date"].strftime("%d %b %Y")
+                                 if r["article_date"] else "")
+            r["summary_main"], _ = _split_summary(r.get("summary"))
+        answer = _answer(q, hits) if hits else (
+            "Nothing in the database matches that. It only knows what has been "
+            "scraped, so either it has not been collected or the wording is "
+            "different from the headlines.")
+
+    return templates.TemplateResponse(request, "ask.html", {
+        "title": "Ask", "build": BUILD, "total_articles": len(hits),
+        "q": q, "answer": answer, "hits": hits, "week_idx": week_idx,
+        "week_labels": ([(ALL_TIME, "All time")]
+                        + [(i, w[2]) for i, w in enumerate(weeks)]),
+    })
+
+
+def _answer(question: str, hits: list[dict]) -> str:
+    """Ask the model the question over the retrieved articles."""
+    import openai
+
+    key = os.environ.get("OPENAI_API_KEY")
+    if not key:
+        return ("OPENAI_API_KEY is not set on this service, so the answer "
+                "cannot be generated. The matching articles are listed below.")
+
+    lines = []
+    for i, r in enumerate(hits[:25], 1):
+        lines.append(f"[{i}] {r['title']} — {r['source_label']}, "
+                     f"{r['article_date']}\n{r.get('summary_main') or ''}")
+    try:
+        client = openai.OpenAI(api_key=key)
+        resp = client.chat.completions.create(
+            model=os.environ.get("OPENAI_SUMMARY_MODEL", "gpt-4.1-mini"),
+            messages=[{"role": "system", "content": _ASK_SYSTEM},
+                      {"role": "user",
+                       "content": f"Question: {question}\n\nArticles:\n\n"
+                                  + "\n\n".join(lines)}],
+            max_tokens=700, temperature=0.2)
+        return (resp.choices[0].message.content or "").strip()
+    except Exception as e:
+        return f"The model call failed ({type(e).__name__}). The matching articles are below."
 
 
 @app.get("/export.csv")

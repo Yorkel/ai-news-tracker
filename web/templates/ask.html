@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block nav %}
+<nav class="tabs" aria-label="Sections"><div class="wrap"><div class="row">
+  <a class="tab" href="/">← Back to sorting</a>
+  <a class="tab" href="/digest">This week</a>
+  <a class="tab on" href="/ask">Ask</a>
+</div></div></nav>
+{% endblock %}
+
+{% block body %}
+<form method="get" class="askform">
+  <input type="search" name="q" value="{{ q }}" autofocus
+         placeholder="What happened on the EU AI Act? Anything on eval validity?">
+  <select name="week">
+    {% for i, lbl in week_labels %}
+      <option value="{{ i }}" {{ 'selected' if i == week_idx else '' }}>{{ lbl }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn primary" type="submit">Ask</button>
+</form>
+
+{% if answer %}
+  <div class="answer">{{ answer }}</div>
+  <h2 class="dhead">What it read <span class="dn">{{ hits|length }}</span></h2>
+  {% for a in hits %}
+    <article class="ditem">
+      <h3>[{{ loop.index }}] <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h3>
+      <p class="dmeta">{{ a.source_label }} · {{ a.article_date }} · {{ a.place }}</p>
+      {% if a.summary_main %}<p class="dsum">{{ a.summary_main }}</p>{% endif %}
+    </article>
+  {% endfor %}
+{% elif not q %}
+  <p class="empty">Ask about anything in the tracker. It answers only from the
+    articles it has collected, and shows you which ones it read.</p>
+{% endif %}
+{% endblock %}

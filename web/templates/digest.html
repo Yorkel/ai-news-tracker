@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block nav %}
+<nav class="tabs" aria-label="Sections"><div class="wrap"><div class="row">
+  <a class="tab" href="/">← Back to sorting</a>
+  <a class="tab on" href="/digest?week={{ week_idx }}">This week</a>
+</div></div></nav>
+{% endblock %}
+
+{% block body %}
+<div class="filters">
+  <div class="tools" style="margin-left:0">
+    <form method="get" style="display:flex;gap:7px">
+      <select name="week">
+        {% for i, lbl in week_labels %}
+          <option value="{{ i }}" {{ 'selected' if i == week_idx else '' }}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn" type="submit">Go</button>
+    </form>
+    <a class="btn primary" href="/export.csv?stream=all&week={{ week_idx }}">↓ CSV</a>
+    <button class="btn" type="button" id="copymd">Copy as Markdown</button>
+    <span class="tosort"><b>{{ total_articles }}</b> items · <b>{{ picked }}</b> high relevance</span>
+  </div>
+</div>
+
+{% if not groups %}
+  <p class="empty">Nothing kept or ticked for {{ week_label }} yet.
+     Sort some articles and they will appear here.</p>
+{% endif %}
+
+<div id="digest">
+{% for name, items in groups %}
+  <section class="dgroup">
+    <h2 class="dhead">{{ name }} <span class="dn">{{ items|length }}</span></h2>
+    {% for a in items %}
+      <article class="ditem {{ 'picked' if a.for_newsletter else '' }}">
+        <h3><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h3>
+        <p class="dmeta">{{ a.source_label }} · {{ a.article_date }} · {{ a.place }}
+          {% if a.for_newsletter %}<span class="hi">high relevance</span>{% endif %}</p>
+        {% if a.summary_main %}<p class="dsum">{{ a.summary_main }}</p>{% endif %}
+        {% if a.summary_why %}<p class="dwhy">{{ a.summary_why }}</p>{% endif %}
+        {% for n in a.notes %}<p class="dnote">{{ n.note }}</p>{% endfor %}
+      </article>
+    {% endfor %}
+  </section>
+{% endfor %}
+</div>
+{% endblock %}
