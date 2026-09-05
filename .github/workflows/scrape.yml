@@ -3,15 +3,27 @@ name: Scrape sources to articles
 # Runs daily so that Friday's triage is never a cold start, and the weekly
 # post is drawn from a full week already in the database.
 #
-# 06:00 UTC daily. The publishing week is Friday to Thursday
-# (week.anchor_day in config/domain.yml), so Friday morning's run closes the
-# week you are about to write up.
+# 22:37 UTC daily, so it runs overnight UK time and the pile is waiting in the
+# morning. GitHub does not run scheduled jobs on time: it queues them under
+# load, and 06:00 UTC was consistently firing at 10:54 UTC — nearly five hours
+# late, i.e. lunchtime. That delay cannot be configured away, so the schedule
+# is set for where it actually lands rather than where it is written:
+#
+#     no delay          22:37 UTC = 23:37 BST, late evening
+#     the usual delay   ~03:30 UTC = ~04:30 BST, overnight
+#
+# Either way it is finished before morning. The odd minute is deliberate:
+# GitHub's queue is worst on the hour, so :37 waits less than :00.
+#
+# The publishing week is Friday to Thursday (week.anchor_day in
+# config/domain.yml). Running late on Thursday closes that week overnight,
+# ready for Friday, which is when the post gets written.
 #
 # --since-last-run reads started_at from the most recent successful scrape_runs
 # row, so a missed day is picked up automatically rather than leaving a hole.
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '37 22 * * *'
   workflow_dispatch:
 
 concurrency:
