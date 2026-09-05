@@ -35,17 +35,24 @@ def _conn():
 
 
 def week_options(limit: int = 12) -> list[tuple[date, date, str]]:
-    """Completed publishing weeks, newest first, back to the oldest article."""
+    """Publishing weeks, newest first, back to the oldest article.
+
+    The week in progress comes first. It used to start at the last *completed*
+    week, which meant everything published since the Friday anchor — today's
+    scrape included — was invisible unless you picked All time.
+    """
     with _conn() as c, c.cursor() as cur:
         cur.execute("select min(article_date) d from articles where article_date is not null")
         row = cur.fetchone()
     earliest = row["d"] if row and row["d"] else date.today()
     current_start = anchor_on_or_before(date.today())
     out: list[tuple[date, date, str]] = []
-    cur_start = current_start - timedelta(days=7)
+    cur_start = current_start
     while cur_start >= anchor_on_or_before(earliest) and len(out) < limit:
         end = cur_start + timedelta(days=6)
-        out.append((cur_start, end, f"{cur_start:%a %-d %b} – {end:%a %-d %b %Y}"))
+        span = f"{cur_start:%a %-d %b} – {end:%a %-d %b %Y}"
+        out.append((cur_start, end,
+                    f"This week · {span}" if cur_start == current_start else span))
         cur_start -= timedelta(days=7)
     return out or [(current_start - timedelta(days=7), current_start - timedelta(days=1), "this week")]
 
