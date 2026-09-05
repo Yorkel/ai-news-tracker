@@ -2,9 +2,9 @@
 
 AI News Tracker is my production research and editorial system for monitoring
 developments in AI governance, safety, research, geopolitics and industry. It
-collects material from 124 active sources, filters and summarises relevant
-articles, and presents them in a private Streamlit workspace for human review
-and newsletter preparation.
+collects material from 120 active sources, filters and summarises relevant
+articles, and presents them in a private, password-gated web workspace for
+human review and newsletter preparation.
 
 ## What it does
 
@@ -12,21 +12,28 @@ and newsletter preparation.
 - Applies an approved-domain gate and configurable relevance filters before storage.
 - Generates concise article summaries with deterministic fallbacks when model
   providers are unavailable.
-- Organises articles across seven editorial streams and five geographic groupings.
-- Supports curator decisions, stream overrides, notes, source suggestions and
-  newsletter-ready Excel export.
+- Organises articles across eight editorial categories and five geographic
+  groupings, holding arXiv preprints out of the main view so news is not buried.
+- Supports curator decisions, category overrides, per-article notes, a
+  high-relevance flag and CSV export.
+- Assembles the week's selections into a digest grouped by category, ready to
+  paste into Substack.
+- Answers questions from the collected articles, citing the ones it read.
 
 ## System flow
 
 ```text
 Sources → ingestion and filtering → Neon PostgreSQL
-        → summarisation → Streamlit curator dashboard → newsletter preparation
+        → summarisation → FastAPI curator dashboard → weekly digest → Substack
 ```
 
 ## Engineering
 
-The system is written in Python and uses Streamlit for the review interface and
-Neon PostgreSQL for persistent storage. The scraper is configuration-driven, the
+The system is written in Python and uses FastAPI with server-rendered Jinja2
+templates for the review interface and Neon PostgreSQL for persistent storage.
+Actions post in the background so the page never reloads and scroll position is
+kept, and every form still works without JavaScript. The scraper is
+configuration-driven, the
 database client uses parameterised SQL, ingestion is idempotent, and curator
 decisions are retained separately from generated article data.
 
