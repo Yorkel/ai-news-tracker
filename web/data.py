@@ -146,6 +146,23 @@ def clear_decision(url: str) -> None:
         c.commit()
 
 
+def digest_rows(week: tuple[date, date] | None) -> list[dict]:
+    """Everything picked for the week: high relevance first, then kept.
+
+    High relevance is the tick box; kept is the softer "worth a second look".
+    Both go in, ordered so the picks lead, because that is the order they are
+    likely to be written up in.
+    """
+    kept, _ = fetch_articles(None, None, week, "kept", "", 0, 10**6)
+    picked, _ = fetch_articles(None, None, week, "newsletter", "", 0, 10**6)
+    seen, out = set(), []
+    for r in picked + kept:
+        if r["url"] not in seen:
+            seen.add(r["url"])
+            out.append(r)
+    return out
+
+
 def set_newsletter(url: str, on: bool) -> None:
     """Tick or untick "high relevance" on an article.
 

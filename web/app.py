@@ -195,6 +195,41 @@ def move(request: Request, url: str = Form(...), stream: str = Form(""),
     return _done(request, back)
 
 
+@app.get("/digest", response_class=HTMLResponse)
+def digest(request: Request, week: int = 0):
+    """This week's picks, grouped by category, ready to paste into Substack."""
+    blocked = auth.require(request)
+    if blocked is not None:
+        return blocked
+    weeks = D.week_options()
+    week_idx, wk = _week_range(weeks, week)
+    rows = D.digest_rows(wk)
+
+    for r in rows:
+        r["source_label"] = source_display(r["source"])
+        r["stream_label"] = S.SHORT.get(r["stream"], r["stream"])
+        r["article_date"] = r["article_date"].strftime("%d %b") if r["article_date"] else ""
+        r["summary_main"], r["summary_why"] = _split_summary(r.get("summary"))
+    notes = D.notes_for([r["url"] for r in rows])
+    for r in rows:
+        r["notes"] = notes.get(r["url"], [])
+
+    # Grouped in the configured category order, so the post reads the same way
+    # every week rather than in whatever order the articles arrived.
+    groups = [(S.SHORT[s], [r for r in rows if r["stream"] == s]) for s in S.ORDER]
+    groups = [(name, items) for name, items in groups if items]
+
+    label = ("All time" if wk is None
+             else next((w[2] for i, w in enumerate(weeks) if i == week_idx), ""))
+    return templates.TemplateResponse(request, "digest.html", {
+        "title": "This week", "build": BUILD, "total_articles": len(rows),
+        "groups": groups, "rows": rows, "week_idx": week_idx,
+        "week_label": label, "picked": sum(1 for r in rows if r["for_newsletter"]),
+        "week_labels": ([(ALL_TIME, "All time")]
+                        + [(i, w[2]) for i, w in enumerate(weeks)]),
+    })
+
+
 @app.get("/export.csv")
 def export_csv(request: Request, stream: str = "all", week: int = 0,
                status: str = "kept"):
