@@ -3,8 +3,10 @@ name: Scrape sources to articles
 # Runs daily so that Friday's triage is never a cold start, and the weekly
 # post is drawn from a full week already in the database.
 #
-# 22:37 UTC daily, so it runs overnight UK time and the pile is waiting in the
-# morning. GitHub does not run scheduled jobs on time: it queues them under
+# 02:00 UTC daily, so it runs overnight UK time and the pile is waiting in the
+# morning. It was 22:37, which landed at 00:11 — overnight, but eleven minutes
+# into the new day, so it collected the day before and then sat idle through
+# the whole of the next one. Starting at 02:00 covers a full day. GitHub does not run scheduled jobs on time: it queues them under
 # load, and 06:00 UTC was consistently firing at 10:54 UTC — nearly five hours
 # late, i.e. lunchtime. That delay cannot be configured away, so the schedule
 # is set for where it actually lands rather than where it is written:
@@ -23,7 +25,7 @@ name: Scrape sources to articles
 # row, so a missed day is picked up automatically rather than leaving a hole.
 on:
   schedule:
-    - cron: '37 22 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 concurrency:

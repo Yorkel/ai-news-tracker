@@ -40,6 +40,22 @@ BASE = Path(__file__).resolve().parent
 app = FastAPI(title="AI News Tracker")
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 
+@app.middleware("http")
+async def no_store(request: Request, call_next):
+    """Tell the browser never to reuse a page from its cache.
+
+    The app sent no cache headers at all, so browsers applied heuristic
+    caching and decided for themselves how long a page stayed good. The
+    result was a dashboard that showed yesterday's articles, and yesterday's
+    buttons after a deploy, until it was hard-refreshed. Every page here is a
+    view of a database that changes several times a day, and none of it is
+    worth caching.
+    """
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    return response
+
+
 PER_PAGE = 25
 
 # Sentinel week meaning "do not filter by date at all".
