@@ -44,10 +44,11 @@ jobs:
       - name: Verify required secrets are set
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          # Only DATABASE_URL is required. The scrape uses no paid model API,
+          # so no OpenAI or Anthropic key is passed to it.
           missing=""
-          for name in DATABASE_URL OPENAI_API_KEY; do
+          for name in DATABASE_URL; do
             if [ -z "${!name}" ]; then
               missing="$missing $name"
             fi
@@ -74,10 +75,11 @@ jobs:
           # DATABASE_URL selects the Postgres backend (Neon). If it is unset,
           # get_client() falls back to Supabase — see src/scraping/pg_client.py.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          ENRICH_PROVIDER: openai
-          OPENAI_SUMMARY_MODEL: gpt-4.1-mini
+          # No OPENAI_API_KEY or ANTHROPIC_API_KEY: neither scrape may draw on
+          # pay-as-you-go credit. With no key, each summary falls back to an
+          # extract from the article's own text and topic tags are left empty.
+          # On 30 Sep the OpenAI balance ran out, every article waited ~40s on
+          # failing calls, and every run hit the 60-minute timeout.
         run: python -m src.scraping.run --since-last-run
 
       - name: Summarise the run
