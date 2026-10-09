@@ -1190,3 +1190,275 @@ sources:
 # Also excluded: vendors as sources (named in the research as objects of study,
 # not publishers), and the paywalled MLex and The Information.
 # ─────────────────────────────────────────────────────────────────────────
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Education, UK and Ireland. Added 2026-10-09 for the Education stream.
+  # Every feed was read through feedparser on 2026-10-09 and had entries and a
+  # latest item within four weeks.
+  #
+  # Own feeds are general education publishers, so all carry the AI filter.
+  # Low-volume institutional feeds also match the body; high-volume news feeds
+  # match the title only.
+  #
+  # Schools Week, FE Week and Jisc return 403 to feed readers; Tes and EPI
+  # feeds are empty; Times Higher Education, EEF, NFER, Education Scotland and
+  # the Scottish, Welsh and Irish governments have no working feed. These are
+  # read through Google News searches limited to the site and to AI terms.
+  # Google News queries are AI-scoped already; the filter is added only where
+  # fewer than half the 2026-10-09 titles mentioned AI (EEF 8/100, NFER 7/53,
+  # Education Scotland 1/36, gov.scot 35/100, gov.ie 23/100).
+  # ─────────────────────────────────────────────────────────────────────
+
+  # England and UK-wide
+
+  - name: schools_week
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Aschoolsweek.co.uk+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Own feed returns 403.
+
+  - name: fe_week
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Afeweek.co.uk+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Own feed returns 403.
+
+  - name: tes
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Ates.com+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Own feed (tes.com/magazine/rss) has no entries.
+
+  - name: times_higher_education
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Atimeshighereducation.com+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+
+  - name: wonkhe
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://wonkhe.com/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: hepi
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.hepi.ac.uk/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: fe_news
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.fenews.co.uk/feed/"
+      apply_relevance_filter: true
+    disabled: false
+    # About 50 items a day; title match only.
+
+  - name: jisc
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Ajisc.ac.uk+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # Covers Jisc's National Centre for AI. Its own feed returns 403.
+
+  - name: dfe
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.gov.uk/government/organisations/department-for-education.atom"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: ofqual
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.gov.uk/government/organisations/ofqual.atom"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: ofsted
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.gov.uk/government/organisations/ofsted.atom"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: eef
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://news.google.com/rss/search?q=site%3Aeducationendowmentfoundation.org.uk+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: nfer
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://news.google.com/rss/search?q=site%3Anfer.ac.uk+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: conversation_uk_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://theconversation.com/uk/education/articles.atom"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: guardian_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.theguardian.com/education/rss"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: bbc_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://feeds.bbci.co.uk/news/education/rss.xml"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: ioe_blog
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://blogs.ucl.ac.uk/ioe/feed/"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: bera_blog
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.bera.ac.uk/feed"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+
+  - name: google_news_education_uk
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+pupils+OR+teachers+OR+classroom+OR+university+OR+students%29+%28UK+OR+England+OR+Britain%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+    # AI in UK education, any publisher.
+
+  # Scotland
+
+  - name: gov_scot_education
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://news.google.com/rss/search?q=site%3Agov.scot+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+education+OR+pupils+OR+teachers%29&hl=en-GB&gl=GB&ceid=GB:en"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: education_scotland
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://news.google.com/rss/search?q=site%3Aeducation.gov.scot+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29&hl=en-GB&gl=GB&ceid=GB:en"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: google_news_education_scotland
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+pupils+OR+teachers+OR+classroom+OR+university%29+%28Scotland+OR+Scottish%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+
+  # Wales
+
+  - name: gov_wales_education
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=site%3Agov.wales+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+education+OR+pupils+OR+teachers%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+
+  - name: google_news_education_wales
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+pupils+OR+teachers+OR+classroom+OR+university%29+%28Wales+OR+Welsh%29&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+
+  # Northern Ireland
+
+  - name: de_ni
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.education-ni.gov.uk/rss.xml"
+      apply_relevance_filter: true
+      match_body: true
+    disabled: false
+    # Department of Education NI. The feed also carries old pages (e.g. COVID guidance).
+
+  - name: google_news_education_ni
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+pupils+OR+teachers+OR+classroom+OR+university%29+%22Northern+Ireland%22&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+
+  # Ireland
+
+  - name: irish_times_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.irishtimes.com/arc/outboundfeeds/feed-education/?outputType=xml"
+      apply_relevance_filter: true
+    disabled: false
+    # About 100 items; title match only.
+
+  - name: rte_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.rte.ie/feeds/rss/?index=/news/education/"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: irish_independent_education
+    type: rss
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://www.independent.ie/irish-news/education/rss"
+      apply_relevance_filter: true
+    disabled: false
+
+  - name: gov_ie_education
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params:
+      feed_url: "https://news.google.com/rss/search?q=site%3Agov.ie+%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+education+OR+pupils+OR+teachers%29&hl=en-GB&gl=GB&ceid=GB:en"
+      apply_relevance_filter: true
+    disabled: false
+    # Department of Education and Youth. No working gov.ie feed found.
+
+  - name: google_news_education_ireland
+    type: google_news
+    scraper: src.scraping.rss_adapter
+    params: {feed_url: "https://news.google.com/rss/search?q=%28%22artificial+intelligence%22+OR+AI+OR+ChatGPT+OR+%22generative+AI%22%29+%28school+OR+schools+OR+pupils+OR+teachers+OR+classroom+OR+university%29+%28Ireland+OR+Irish%29+-%22Northern+Ireland%22&hl=en-GB&gl=GB&ceid=GB:en"}
+    disabled: false
+

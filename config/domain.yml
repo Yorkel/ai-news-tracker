@@ -55,7 +55,7 @@ labels:
 # ─────────────────────────────────────────────────────────────────────────
 streams:
   order: [governance, geopolitics, safety, research, technical, deployment,
-          podcasts, papers]
+          education, podcasts, papers]
 
   # `papers` is deliberately last and deliberately separate. arXiv publishes
   # ~150 preprints a week to cs.CY alone, three times the next biggest source,
@@ -243,6 +243,47 @@ streams:
       - venturebeat_ai
       - zdnet_ai
 
+  # Added 2026-10-09. AI in schools, colleges and universities across the UK
+  # and Ireland: the sector press, the education departments and regulators,
+  # and education research bodies. Sources are in src/scraping/sources.yml
+  # under "Education, UK and Ireland".
+  education:
+    display: "AI in education"
+    short: "Education"
+    description: "AI in schools, colleges and universities across the UK and Ireland."
+    sources:
+      - schools_week
+      - fe_week
+      - tes
+      - times_higher_education
+      - wonkhe
+      - hepi
+      - fe_news
+      - jisc
+      - dfe
+      - ofqual
+      - ofsted
+      - eef
+      - nfer
+      - conversation_uk_education
+      - guardian_education
+      - bbc_education
+      - ioe_blog
+      - bera_blog
+      - google_news_education_uk
+      - gov_scot_education
+      - education_scotland
+      - google_news_education_scotland
+      - gov_wales_education
+      - google_news_education_wales
+      - de_ni
+      - google_news_education_ni
+      - irish_times_education
+      - rte_education
+      - irish_independent_education
+      - gov_ie_education
+      - google_news_education_ireland
+
   podcasts:
     display: "Podcasts"
     short: "Podcasts"
@@ -332,8 +373,41 @@ places:
     - simon_willison
     - the_ferret
     - we_and_ai
+    # Education stream, added 2026-10-09
+    - schools_week
+    - fe_week
+    - tes
+    - times_higher_education
+    - wonkhe
+    - hepi
+    - fe_news
+    - jisc
+    - dfe
+    - ofqual
+    - ofsted
+    - eef
+    - nfer
+    - conversation_uk_education
+    - guardian_education
+    - bbc_education
+    - ioe_blog
+    - bera_blog
+    - google_news_education_uk
+    - gov_scot_education
+    - education_scotland
+    - google_news_education_scotland
+    - gov_wales_education
+    - google_news_education_wales
+    - de_ni
+    - google_news_education_ni
   Ireland:
     - google_news_ireland
+    # Education stream, added 2026-10-09
+    - irish_times_education
+    - rte_education
+    - irish_independent_education
+    - gov_ie_education
+    - google_news_education_ireland
     - business_post
     - silicon_republic
     - irish_tech_news
@@ -559,6 +633,16 @@ relevance:
     - iccl.ie
     - rkennedy.ie
     - rte.ie
+    # Education, UK and Ireland (added 2026-10-09). gov.uk, theconversation.com,
+    # theguardian.com, bbc.co.uk, rte.ie, independent.ie and news.google.com
+    # were already approved.
+    - wonkhe.com
+    - hepi.ac.uk
+    - fenews.co.uk
+    - blogs.ucl.ac.uk
+    - bera.ac.uk
+    - education-ni.gov.uk
+    - irishtimes.com
     # Governance institutes and research orgs
     - governance.ai
     - techpolicy.press
@@ -688,6 +772,14 @@ relevance:
   # Subset of approved_domains that publish across many topics, so the keyword
   # filter must also pass (e.g. general news sites, university news pages).
   broad_domains:
+    # Education publishers, added 2026-10-09: they cover all of education.
+    - wonkhe.com
+    - hepi.ac.uk
+    - fenews.co.uk
+    - blogs.ucl.ac.uk
+    - bera.ac.uk
+    - education-ni.gov.uk
+    - irishtimes.com
     - gov.uk
     - gds.blog.gov.uk
     - nist.gov
